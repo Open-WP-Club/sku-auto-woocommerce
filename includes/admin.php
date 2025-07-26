@@ -131,6 +131,9 @@ class SKU_Generator_Admin
               <button id="fix-invalid-skus" class="sku-button danger hidden">
                 <?php _e('Fix Invalid SKUs', 'sku-generator'); ?>
               </button>
+              <button id="debug-products" class="sku-button" style="background: #666;">
+                <?php _e('Debug Products', 'sku-generator'); ?>
+              </button>
             </div>
             
             <div id="validation-progress-container" class="sku-progress hidden">
@@ -148,4 +151,6 @@ class SKU_Generator_Admin
     </div>
     <?php
   }
+
+  // Remove the old render_styles method since we're using external CSS now
 }

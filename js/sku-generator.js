@@ -169,7 +169,65 @@ jQuery(document).ready(function ($) {
     });
   });
 
-  // Notification system
+  // Debug products functionality
+  $("#debug-products").on("click", function (e) {
+    e.preventDefault();
+
+    const $button = $(this);
+    const originalText = $button.text();
+    
+    $button.prop("disabled", true).text("Debugging...");
+
+    $.ajax({
+      url: skuGeneratorAjax.ajaxurl,
+      type: "POST",
+      data: {
+        action: "debug_products",
+        nonce: skuGeneratorAjax.nonce,
+      },
+      success: function (response) {
+        if (response.success) {
+          const data = response.data;
+          let debugHtml = '<div style="background: #f0f0f0; padding: 15px; margin: 20px 0; border-radius: 4px; font-family: monospace; font-size: 12px;">';
+          debugHtml += '<h4>Debug Information:</h4>';
+          debugHtml += '<p><strong>HPOS Enabled:</strong> ' + (data.hpos_enabled ? 'Yes' : 'No') + '</p>';
+          
+          if (data.hpos_enabled) {
+            debugHtml += '<p><strong>Total Products (HPOS):</strong> ' + data.total_products_hpos + '</p>';
+            debugHtml += '<p><strong>HPOS Tables Exist:</strong> ' + JSON.stringify(data.hpos_tables_exist) + '</p>';
+          } else {
+            debugHtml += '<p><strong>Total Products (Legacy):</strong> ' + data.total_products_legacy + '</p>';
+          }
+          
+          debugHtml += '<h5>Sample Products (first 5):</h5>';
+          debugHtml += '<table border="1" style="border-collapse: collapse; width: 100%;">';
+          debugHtml += '<tr><th>ID</th><th>Name</th><th>SKU (DB)</th><th>SKU (WC)</th><th>Type</th></tr>';
+          
+          data.sample_products.forEach(function(product) {
+            debugHtml += '<tr>';
+            debugHtml += '<td>' + product.id + '</td>';
+            debugHtml += '<td>' + product.name + '</td>';
+            debugHtml += '<td>' + (product.sku_from_db || '[EMPTY]') + '</td>';
+            debugHtml += '<td>' + (product.sku_from_wc || '[EMPTY]') + '</td>';
+            debugHtml += '<td>' + product.type + '</td>';
+            debugHtml += '</tr>';
+          });
+          
+          debugHtml += '</table></div>';
+          
+          // Show debug info
+          $('#validation-results').html(debugHtml).removeClass('hidden');
+        } else {
+          showNotification("Debug failed: " + response.data, 'error');
+        }
+        $button.prop("disabled", false).text(originalText);
+      },
+      error: function () {
+        showNotification("Debug request failed.", 'error');
+        $button.prop("disabled", false).text(originalText);
+      },
+    });
+  });
   function showNotification(message, type = 'info') {
     // Remove existing notifications
     $('.sku-notification').remove();
