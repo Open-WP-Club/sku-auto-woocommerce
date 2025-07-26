@@ -165,10 +165,18 @@
 
 .sku-button.danger {
   background: #d63638;
+  border-color: #d63638;
 }
 
 .sku-button.danger:hover {
   background: #b32d2e;
+  border-color: #b32d2e;
+}
+
+.sku-button.danger:disabled {
+  background: #f0a0a0;
+  border-color: #f0a0a0;
+  cursor: not-allowed;
 }
 
 /* Action Section */

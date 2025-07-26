@@ -35,10 +35,15 @@ function sku_generator_check_woocommerce()
 function sku_generator_include_files()
 {
   require_once SKU_GENERATOR_PLUGIN_DIR . 'includes/admin.php';
-  require_once SKU_GENERATOR_PLUGIN_DIR . 'includes/ajax.php';
+  require_once SKU_GENERATOR_PLUGIN_DIR . 'includes/ajax/generation.php';
+  require_once SKU_GENERATOR_PLUGIN_DIR . 'includes/ajax/validation.php';
+  require_once SKU_GENERATOR_PLUGIN_DIR . 'includes/ajax/cleanup.php';
+  require_once SKU_GENERATOR_PLUGIN_DIR . 'includes/ajax/gtin.php';
+  require_once SKU_GENERATOR_PLUGIN_DIR . 'includes/ajax/debug.php';
   require_once SKU_GENERATOR_PLUGIN_DIR . 'includes/generator.php';
   require_once SKU_GENERATOR_PLUGIN_DIR . 'includes/validator.php';
   require_once SKU_GENERATOR_PLUGIN_DIR . 'includes/settings.php';
+  require_once SKU_GENERATOR_PLUGIN_DIR . 'includes/helpers.php';
 }
 
 // Initialize the plugin
@@ -52,7 +57,11 @@ function sku_generator_init()
 
   // Initialize components
   new SKU_Generator_Admin();
-  new SKU_Generator_Ajax();
+  new SKU_Generator_Ajax_Generation();
+  new SKU_Generator_Ajax_Validation();
+  new SKU_Generator_Ajax_Cleanup();
+  new SKU_Generator_Ajax_GTIN();
+  new SKU_Generator_Ajax_Debug();
   new SKU_Generator_Settings();
 }
 

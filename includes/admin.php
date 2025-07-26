@@ -67,6 +67,9 @@ class SKU_Generator_Admin
         <a href="#validate" class="nav-tab" id="validate-tab">
           <?php _e('Validate SKUs', 'sku-generator'); ?>
         </a>
+        <a href="#cleanup" class="nav-tab" id="cleanup-tab">
+          <?php _e('Clean Up', 'sku-generator'); ?>
+        </a>
       </div>
 
       <!-- Settings Tab -->
@@ -163,6 +166,68 @@ class SKU_Generator_Admin
           <div id="validation-results" class="sku-results hidden">
             <div id="validation-summary"></div>
             <div id="invalid-skus-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Clean Up Tab -->
+      <div id="cleanup-content" class="tab-content">
+        <div class="sku-card">
+          <h3><?php _e('Clean Up SKUs and GTIN Fields', 'sku-generator'); ?></h3>
+          <p><?php _e('Remove SKUs and GTIN fields from your products. Use this if you want to start fresh or if you\'re not satisfied with the generated values.', 'sku-generator'); ?></p>
+          
+          <div class="sku-info-box" style="border-left-color: #d63638; background: #fff8f8;">
+            <h4 style="color: #d63638;"><?php _e('⚠️ Warning', 'sku-generator'); ?></h4>
+            <ul>
+              <li><?php _e('These actions cannot be undone', 'sku-generator'); ?></li>
+              <li><?php _e('Removing SKUs may affect inventory tracking and orders', 'sku-generator'); ?></li>
+              <li><?php _e('Make sure to backup your database before proceeding', 'sku-generator'); ?></li>
+              <li><?php _e('Consider exporting your products first', 'sku-generator'); ?></li>
+            </ul>
+          </div>
+
+          <div class="sku-action-section">
+            <div class="sku-actions">
+              <button id="remove-all-skus" class="sku-button danger">
+                <?php _e('Remove All SKUs', 'sku-generator'); ?>
+              </button>
+              <button id="remove-generated-skus" class="sku-button danger">
+                <?php _e('Remove Generated SKUs Only', 'sku-generator'); ?>
+              </button>
+              <button id="remove-all-gtin" class="sku-button danger">
+                <?php _e('Remove All GTIN Fields', 'sku-generator'); ?>
+              </button>
+              <button id="remove-empty-skus" class="sku-button secondary">
+                <?php _e('Remove Empty SKUs', 'sku-generator'); ?>
+              </button>
+            </div>
+            
+            <div id="cleanup-progress-container" class="sku-progress hidden">
+              <progress value="0" max="100"></progress>
+              <span id="cleanup-progress-text" class="sku-progress-text">0%</span>
+            </div>
+          </div>
+
+          <div class="sku-card" style="margin-top: 30px; background: #f8f9fa;">
+            <h4><?php _e('Clean Up Options Explained:', 'sku-generator'); ?></h4>
+            <div style="display: grid; gap: 15px; margin-top: 15px;">
+              <div>
+                <strong><?php _e('Remove All SKUs:', 'sku-generator'); ?></strong>
+                <span><?php _e('Completely removes SKU values from all products (generated and manual)', 'sku-generator'); ?></span>
+              </div>
+              <div>
+                <strong><?php _e('Remove Generated SKUs Only:', 'sku-generator'); ?></strong>
+                <span><?php _e('Only removes SKUs that match your current generation pattern', 'sku-generator'); ?></span>
+              </div>
+              <div>
+                <strong><?php _e('Remove All GTIN Fields:', 'sku-generator'); ?></strong>
+                <span><?php _e('Removes GTIN/UPC/EAN/ISBN values from all products', 'sku-generator'); ?></span>
+              </div>
+              <div>
+                <strong><?php _e('Remove Empty SKUs:', 'sku-generator'); ?></strong>
+                <span><?php _e('Cleans up products that have empty or whitespace-only SKU values', 'sku-generator'); ?></span>
+              </div>
+            </div>
           </div>
         </div>
       </div>

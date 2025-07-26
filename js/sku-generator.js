@@ -1,58 +1,4 @@
-// Copy SKUs to GTIN functionality
-  $("#copy-skus-to-gtin").on("click", function (e) {
-    e.preventDefault();
-
-    if (!confirm("This will copy all existing SKUs to GTIN fields. Continue?")) {
-      return;
-    }
-
-    const $button = $(this);
-    const $progress = $("#gtin-progress-container");
-    const $progressBar = $progress.find("progress");
-    const $progressText = $("#gtin-progress-text");
-
-    // Disable button and show progress
-    $button.prop("disabled", true).addClass('sku-loading');
-    $progress.removeClass('hidden');
-    $progressBar.val(0);
-    $progressText.text('0%');
-
-    function copySkusToGtin(offset = 0) {
-      $.ajax({
-        url: skuGeneratorAjax.ajaxurl,
-        type: "POST",
-        data: {
-          action: "copy_skus_to_gtin",
-          nonce: skuGeneratorAjax.nonce,
-          offset: offset,
-        },
-        success: function (response) {
-          if (response.success) {
-            if (response.data.complete) {
-              $progressBar.val(100);
-              $progressText.text("100%");
-              $button.prop("disabled", false).removeClass('sku-loading');
-              $progress.addClass('hidden');
-              showNotification(response.data.message, 'success');
-            } else {
-              $progressBar.val(response.data.progress);
-              $progressText.text(response.data.progress + "%");
-              copySkusToGtin(response.data.offset);
-            }
-          } else {
-            showNotification("Error copying SKUs to GTIN. Please try again.", 'error');
-            resetCopyButton();
-          }
-        },
-        error: function () {
-          showNotification("Error copying SKUs to GTIN. Please try again.", 'error');
-          resetCopyButton();
-        },
-      });
-    }
-
-    function resetCopyButton() {
-      $jQuery(document).ready(function ($) {
+jQuery(document).ready(function ($) {
   // Tab functionality
   $('.nav-tab').on('click', function (e) {
     e.preventDefault();
@@ -122,6 +68,67 @@
     }
 
     generateSKUs();
+  });
+
+  // Copy SKUs to GTIN functionality
+  $("#copy-skus-to-gtin").on("click", function (e) {
+    e.preventDefault();
+
+    if (!confirm("This will copy all existing SKUs to GTIN fields. Continue?")) {
+      return;
+    }
+
+    const $button = $(this);
+    const $progress = $("#gtin-progress-container");
+    const $progressBar = $progress.find("progress");
+    const $progressText = $("#gtin-progress-text");
+
+    // Disable button and show progress
+    $button.prop("disabled", true).addClass('sku-loading');
+    $progress.removeClass('hidden');
+    $progressBar.val(0);
+    $progressText.text('0%');
+
+    function copySkusToGtin(offset = 0) {
+      $.ajax({
+        url: skuGeneratorAjax.ajaxurl,
+        type: "POST",
+        data: {
+          action: "copy_skus_to_gtin",
+          nonce: skuGeneratorAjax.nonce,
+          offset: offset,
+        },
+        success: function (response) {
+          if (response.success) {
+            if (response.data.complete) {
+              $progressBar.val(100);
+              $progressText.text("100%");
+              $button.prop("disabled", false).removeClass('sku-loading');
+              $progress.addClass('hidden');
+              showNotification(response.data.message, 'success');
+            } else {
+              $progressBar.val(response.data.progress);
+              $progressText.text(response.data.progress + "%");
+              copySkusToGtin(response.data.offset);
+            }
+          } else {
+            showNotification("Error copying SKUs to GTIN. Please try again.", 'error');
+            resetCopyButton();
+          }
+        },
+        error: function () {
+          showNotification("Error copying SKUs to GTIN. Please try again.", 'error');
+          resetCopyButton();
+        },
+      });
+    }
+
+    function resetCopyButton() {
+      $button.prop("disabled", false).removeClass('sku-loading');
+      $progress.addClass('hidden');
+    }
+
+    copySkusToGtin();
   });
 
   // Validate SKUs functionality
@@ -282,6 +289,8 @@
       },
     });
   });
+
+  // Notification system
   function showNotification(message, type = 'info') {
     // Remove existing notifications
     $('.sku-notification').remove();
