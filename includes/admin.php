@@ -93,14 +93,32 @@ class SKU_Generator_Admin
           <h3><?php _e('Bulk Generate SKUs', 'sku-generator'); ?></h3>
           <p><?php _e('Generate SKUs for all products that don\'t have one. This process will only add SKUs to products without them - existing SKUs will never be changed.', 'sku-generator'); ?></p>
           
+          <?php 
+          $options = get_option('sku_generator_options', array());
+          $copy_to_gtin = isset($options['copy_to_gtin']) ? $options['copy_to_gtin'] : '0';
+          if ($copy_to_gtin === '1') {
+            echo '<div class="sku-info-box">';
+            echo '<p><strong>' . __('GTIN Copy Enabled:', 'sku-generator') . '</strong> ' . __('Generated SKUs will automatically be copied to GTIN/UPC/EAN/ISBN fields.', 'sku-generator') . '</p>';
+            echo '</div>';
+          }
+          ?>
+          
           <div class="sku-action-section">
             <button id="generate-skus" class="sku-button">
               <?php _e('Start Generating SKUs', 'sku-generator'); ?>
+            </button>
+            <button id="copy-skus-to-gtin" class="sku-button secondary">
+              <?php _e('Copy Existing SKUs to GTIN', 'sku-generator'); ?>
             </button>
             
             <div id="progress-container" class="sku-progress hidden">
               <progress value="0" max="100"></progress>
               <span id="progress-text" class="sku-progress-text">0%</span>
+            </div>
+            
+            <div id="gtin-progress-container" class="sku-progress hidden">
+              <progress value="0" max="100"></progress>
+              <span id="gtin-progress-text" class="sku-progress-text">0%</span>
             </div>
           </div>
         </div>
@@ -151,6 +169,4 @@ class SKU_Generator_Admin
     </div>
     <?php
   }
-
-  // Remove the old render_styles method since we're using external CSS now
 }

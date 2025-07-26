@@ -12,6 +12,7 @@ class SKU_Generator_Ajax
     add_action('wp_ajax_validate_skus', array($this, 'ajax_validate_skus'));
     add_action('wp_ajax_fix_invalid_skus', array($this, 'ajax_fix_invalid_skus'));
     add_action('wp_ajax_debug_products', array($this, 'ajax_debug_products'));
+    add_action('wp_ajax_copy_skus_to_gtin', array($this, 'ajax_copy_skus_to_gtin'));
   }
 
   public function ajax_generate_bulk_skus()
@@ -359,7 +360,104 @@ class SKU_Generator_Ajax
     wp_send_json_success($debug_info);
   }
 
-  // HPOS-compatible methods
+  public function ajax_copy_skus_to_gtin()
+  {
+    try {
+      check_ajax_referer('sku_generator_nonce', 'nonce');
+
+      if (!current_user_can('manage_woocommerce')) {
+        wp_send_json_error('Insufficient permissions');
+        return;
+      }
+
+      $offset = isset($_POST['offset']) ? intval($_POST['offset']) : 0;
+
+      // Get products with SKUs
+      global $wpdb;
+
+      if ($offset === 0) {
+        // Count products with SKUs
+        if ($this->is_hpos_enabled()) {
+          $total_products = (int) $wpdb->get_var("
+            SELECT COUNT(p.id) FROM {$wpdb->prefix}wc_products p
+            INNER JOIN {$wpdb->prefix}wc_product_meta_lookup pml ON p.id = pml.product_id
+            WHERE p.status = 'publish' AND pml.sku IS NOT NULL AND pml.sku != ''
+          ");
+        } else {
+          $total_products = (int) $wpdb->get_var("
+            SELECT COUNT(p.ID) FROM {$wpdb->posts} p
+            INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
+            WHERE p.post_type = 'product' AND p.post_status = 'publish'
+            AND pm.meta_key = '_sku' AND pm.meta_value IS NOT NULL AND pm.meta_value != ''
+          ");
+        }
+
+        set_transient('sku_gtin_copy_total', $total_products, 300);
+      } else {
+        $total_products = get_transient('sku_gtin_copy_total') ?: 100;
+      }
+
+      // Get product IDs with SKUs for this batch
+      if ($this->is_hpos_enabled()) {
+        $product_ids = $wpdb->get_col($wpdb->prepare("
+          SELECT p.id FROM {$wpdb->prefix}wc_products p
+          INNER JOIN {$wpdb->prefix}wc_product_meta_lookup pml ON p.id = pml.product_id
+          WHERE p.status = 'publish' AND pml.sku IS NOT NULL AND pml.sku != ''
+          LIMIT %d OFFSET %d
+        ", $this->batch_size, $offset));
+      } else {
+        $product_ids = $wpdb->get_col($wpdb->prepare("
+          SELECT p.ID FROM {$wpdb->posts} p
+          INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
+          WHERE p.post_type = 'product' AND p.post_status = 'publish'
+          AND pm.meta_key = '_sku' AND pm.meta_value IS NOT NULL AND pm.meta_value != ''
+          LIMIT %d OFFSET %d
+        ", $this->batch_size, $offset));
+      }
+
+      $copied_count = 0;
+
+      foreach ($product_ids as $product_id) {
+        $product = wc_get_product($product_id);
+        if (!$product) {
+          continue;
+        }
+
+        $sku = $product->get_sku();
+        if (empty($sku)) {
+          continue;
+        }
+
+        // Copy SKU to GTIN field using the same logic as in generator
+        $this->copy_sku_to_gtin_field($product, $sku);
+        $product->save();
+        $copied_count++;
+      }
+
+      $progress = $total_products > 0 ? min(100, round(($offset + $this->batch_size) / $total_products * 100)) : 100;
+
+      if (count($product_ids) < $this->batch_size || $progress >= 100) {
+        delete_transient('sku_gtin_copy_total');
+
+        wp_send_json_success(array(
+          'complete' => true,
+          'message' => sprintf(__('Copied SKUs to GTIN fields for %d products!', 'sku-generator'), $copied_count),
+          'progress' => 100
+        ));
+      } else {
+        wp_send_json_success(array(
+          'complete' => false,
+          'offset' => $offset + $this->batch_size,
+          'progress' => $progress,
+          'total' => $total_products,
+          'copied_this_batch' => $copied_count
+        ));
+      }
+    } catch (Exception $e) {
+      error_log('SKU to GTIN Copy Error: ' . $e->getMessage());
+      wp_send_json_error('Copy error: ' . $e->getMessage());
+    }
+  }
   private function get_products_without_skus($offset = 0)
   {
     global $wpdb;
@@ -450,6 +548,52 @@ class SKU_Generator_Ajax
         WHERE post_type = 'product' AND post_status = 'publish'
       ");
     }
+  }
+
+  private function copy_sku_to_gtin_field($product, $sku)
+  {
+    if (!$product) {
+      return;
+    }
+
+    // Common GTIN/UPC/EAN/ISBN meta keys used by various plugins
+    $gtin_meta_keys = array(
+      '_global_unique_id',           // WooCommerce core GTIN field
+      '_wpm_gtin_code',             // WP Marketing Robot
+      '_ywbc_barcode_value',        // YITH WooCommerce Barcodes
+      '_ts_gtin',                   // ThemeSense GTIN
+      '_woo_upc',                   // WooCommerce UPC
+      '_product_gtin',              // Generic GTIN
+      '_gtin',                      // Simple GTIN
+      '_upc',                       // UPC
+      '_ean',                       // EAN
+      '_isbn',                      // ISBN
+      '_barcode'                    // Generic barcode
+    );
+
+    // Check if any GTIN field already has a value
+    $existing_gtin = '';
+    $used_meta_key = '';
+
+    foreach ($gtin_meta_keys as $meta_key) {
+      $value = $product->get_meta($meta_key);
+      if (!empty($value)) {
+        $existing_gtin = $value;
+        $used_meta_key = $meta_key;
+        break;
+      }
+    }
+
+    // If no existing GTIN field found, use the default WooCommerce GTIN field
+    if (empty($used_meta_key)) {
+      $used_meta_key = '_global_unique_id';
+    }
+
+    // Set the SKU as the GTIN value
+    $product->update_meta_data($used_meta_key, $sku);
+
+    // Log the action
+    error_log("SKU Generator: Copied SKU '$sku' to GTIN field '$used_meta_key' for product ID " . $product->get_id());
   }
 
   private function is_hpos_enabled()

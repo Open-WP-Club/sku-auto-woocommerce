@@ -12,6 +12,7 @@ class SKU_Generator_Core
     $pattern_type = isset($options['pattern_type']) ? $options['pattern_type'] : 'alphanumeric';
     $length = isset($options['pattern_length']) ? intval($options['pattern_length']) : 8;
     $separator = isset($options['separator']) ? $options['separator'] : '-';
+    $copy_to_gtin = isset($options['copy_to_gtin']) ? $options['copy_to_gtin'] : '0';
 
     // Ensure separator is valid for SKU format
     if (!in_array($separator, array('-', '_'))) {
@@ -87,6 +88,11 @@ class SKU_Generator_Core
       $sku = 'SKU-' . time() . '-' . $this->generate_random_string($chars, 4);
     }
 
+    // Copy SKU to GTIN field if enabled and product is provided
+    if ($copy_to_gtin === '1' && $product) {
+      $this->copy_sku_to_gtin($product, $sku);
+    }
+
     return $sku;
   }
 
@@ -155,6 +161,52 @@ class SKU_Generator_Core
     }
 
     return $exists > 0;
+  }
+
+  private function copy_sku_to_gtin($product, $sku)
+  {
+    if (!$product) {
+      return;
+    }
+
+    // Common GTIN/UPC/EAN/ISBN meta keys used by various plugins
+    $gtin_meta_keys = array(
+      '_global_unique_id',           // WooCommerce core GTIN field
+      '_wpm_gtin_code',             // WP Marketing Robot
+      '_ywbc_barcode_value',        // YITH WooCommerce Barcodes
+      '_ts_gtin',                   // ThemeSense GTIN
+      '_woo_upc',                   // WooCommerce UPC
+      '_product_gtin',              // Generic GTIN
+      '_gtin',                      // Simple GTIN
+      '_upc',                       // UPC
+      '_ean',                       // EAN
+      '_isbn',                      // ISBN
+      '_barcode'                    // Generic barcode
+    );
+
+    // Check if any GTIN field already has a value
+    $existing_gtin = '';
+    $used_meta_key = '';
+
+    foreach ($gtin_meta_keys as $meta_key) {
+      $value = $product->get_meta($meta_key);
+      if (!empty($value)) {
+        $existing_gtin = $value;
+        $used_meta_key = $meta_key;
+        break;
+      }
+    }
+
+    // If no existing GTIN field found, use the default WooCommerce GTIN field
+    if (empty($used_meta_key)) {
+      $used_meta_key = '_global_unique_id';
+    }
+
+    // Set the SKU as the GTIN value
+    $product->update_meta_data($used_meta_key, $sku);
+
+    // Log the action
+    error_log("SKU Generator: Copied SKU '$sku' to GTIN field '$used_meta_key' for product ID " . $product->get_id());
   }
 
   private function is_hpos_enabled()

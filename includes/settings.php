@@ -104,6 +104,14 @@ class SKU_Generator_Settings
       'sku-generator',
       'sku_generator_main'
     );
+
+    add_settings_field(
+      'copy_to_gtin',
+      __('Copy SKU to GTIN Field', 'sku-generator'),
+      array($this, 'copy_to_gtin_field'),
+      'sku-generator',
+      'sku_generator_main'
+    );
   }
 
   public function section_description()
@@ -136,6 +144,7 @@ class SKU_Generator_Settings
     $sanitized['include_product_id'] = isset($input['include_product_id']) ? '1' : '0';
     $sanitized['include_category'] = isset($input['include_category']) ? '1' : '0';
     $sanitized['include_date'] = isset($input['include_date']) ? '1' : '0';
+    $sanitized['copy_to_gtin'] = isset($input['copy_to_gtin']) ? '1' : '0';
 
     // Sanitize category chars
     $cat_chars = intval($input['category_chars'] ?? 2);
@@ -287,6 +296,19 @@ class SKU_Generator_Settings
       </select>
       <p class="description"><?php _e('Date format to use when including dates in SKUs.', 'sku-generator'); ?></p>
     </div>
+  <?php
+  }
+
+  public function copy_to_gtin_field()
+  {
+    $options = get_option('sku_generator_options', array());
+    $copy_to_gtin = $options['copy_to_gtin'] ?? '0';
+  ?>
+    <div class="sku-checkbox-group">
+      <input type="checkbox" id="copy_to_gtin" name="sku_generator_options[copy_to_gtin]" value="1" <?php checked($copy_to_gtin, '1'); ?> />
+      <label for="copy_to_gtin"><?php _e('Copy generated SKU to GTIN, UPC, EAN, or ISBN field', 'sku-generator'); ?></label>
+    </div>
+    <p class="description"><?php _e('When enabled, the generated SKU will also be copied to the product\'s GTIN/UPC/EAN/ISBN field.', 'sku-generator'); ?></p>
 <?php
   }
 }

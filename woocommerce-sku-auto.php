@@ -72,7 +72,8 @@ register_activation_hook(__FILE__, function () {
     'include_category' => '0',
     'category_chars' => 2,
     'include_date' => '0',
-    'date_format' => 'Ymd'
+    'date_format' => 'Ymd',
+    'copy_to_gtin' => '0'
   );
 
   if (!get_option('sku_generator_options')) {
