@@ -113,6 +113,9 @@ class SKU_Generator_Admin
             <button id="copy-skus-to-gtin" class="sku-button secondary">
               <?php _e('Copy Existing SKUs to GTIN', 'sku-generator'); ?>
             </button>
+            <button id="debug-generation" class="sku-button" style="background: #666;">
+              <?php _e('Debug Generation', 'sku-generator'); ?>
+            </button>
             
             <div id="progress-container" class="sku-progress hidden">
               <progress value="0" max="100"></progress>

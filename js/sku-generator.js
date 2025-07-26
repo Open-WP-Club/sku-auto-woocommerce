@@ -131,6 +131,85 @@ jQuery(document).ready(function ($) {
     copySkusToGtin();
   });
 
+  // Cleanup functionality
+  $("#remove-all-skus").on("click", function (e) {
+    e.preventDefault();
+    executeCleanupAction('remove_all_skus', 'This will remove ALL SKUs from ALL products. This action cannot be undone!', $(this));
+  });
+
+  $("#remove-generated-skus").on("click", function (e) {
+    e.preventDefault();
+    executeCleanupAction('remove_generated_skus', 'This will remove SKUs that match your generation pattern. Continue?', $(this));
+  });
+
+  $("#remove-all-gtin").on("click", function (e) {
+    e.preventDefault();
+    executeCleanupAction('remove_all_gtin', 'This will remove ALL GTIN/UPC/EAN/ISBN fields from ALL products. Continue?', $(this));
+  });
+
+  $("#remove-empty-skus").on("click", function (e) {
+    e.preventDefault();
+    executeCleanupAction('remove_empty_skus', 'This will clean up empty SKU fields. Continue?', $(this));
+  });
+
+  function executeCleanupAction(action, confirmMessage, $button) {
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    const $progress = $("#cleanup-progress-container");
+    const $progressBar = $progress.find("progress");
+    const $progressText = $("#cleanup-progress-text");
+    const originalText = $button.text();
+
+    // Disable button and show progress
+    $button.prop("disabled", true).addClass('sku-loading').text("Processing...");
+    $progress.removeClass('hidden');
+    $progressBar.val(0);
+    $progressText.text('0%');
+
+    function performCleanup(offset = 0) {
+      $.ajax({
+        url: skuGeneratorAjax.ajaxurl,
+        type: "POST",
+        data: {
+          action: action,
+          nonce: skuGeneratorAjax.nonce,
+          offset: offset,
+        },
+        success: function (response) {
+          if (response.success) {
+            if (response.data.complete) {
+              $progressBar.val(100);
+              $progressText.text("100%");
+              $button.prop("disabled", false).removeClass('sku-loading').text(originalText);
+              $progress.addClass('hidden');
+              showNotification(response.data.message, 'success');
+            } else {
+              $progressBar.val(response.data.progress);
+              $progressText.text(response.data.progress + "%");
+              performCleanup(response.data.offset);
+            }
+          } else {
+            showNotification("Error during cleanup. Please try again.", 'error');
+            resetCleanupButton();
+          }
+        },
+        error: function () {
+          showNotification("Error during cleanup. Please try again.", 'error');
+          resetCleanupButton();
+        },
+      });
+    }
+
+    function resetCleanupButton() {
+      $button.prop("disabled", false).removeClass('sku-loading').text(originalText);
+      $progress.addClass('hidden');
+    }
+
+    performCleanup();
+  }
+
   // Validate SKUs functionality
   $("#validate-skus").on("click", function (e) {
     e.preventDefault();
@@ -226,6 +305,65 @@ jQuery(document).ready(function ($) {
       error: function () {
         showNotification("Error fixing SKUs. Please try again.", 'error');
         $button.prop("disabled", false).removeClass('sku-loading').text(originalText);
+      },
+    });
+  });
+
+  // Debug generation functionality
+  $("#debug-generation").on("click", function (e) {
+    e.preventDefault();
+
+    const $button = $(this);
+    const originalText = $button.text();
+    
+    $button.prop("disabled", true).text("Debugging...");
+
+    $.ajax({
+      url: skuGeneratorAjax.ajaxurl,
+      type: "POST",
+      data: {
+        action: "debug_sku_generation",
+        nonce: skuGeneratorAjax.nonce,
+      },
+      success: function (response) {
+        if (response.success) {
+          const data = response.data;
+          let debugHtml = '<div style="background: #f0f0f0; padding: 15px; margin: 20px 0; border-radius: 4px; font-family: monospace; font-size: 12px;">';
+          debugHtml += '<h4>SKU Generation Debug Information:</h4>';
+          debugHtml += '<p><strong>HPOS Enabled:</strong> ' + (data.hpos_enabled ? 'Yes' : 'No') + '</p>';
+          debugHtml += '<p><strong>Total Products:</strong> ' + data.raw_queries.total_products + '</p>';
+          debugHtml += '<p><strong>Products Without SKUs:</strong> ' + data.raw_queries.products_without_skus + '</p>';
+          debugHtml += '<p><strong>Found in Helper Query:</strong> ' + data.products_without_skus.length + '</p>';
+          
+          debugHtml += '<h5>Product Details:</h5>';
+          debugHtml += '<table border="1" style="border-collapse: collapse; width: 100%;">';
+          debugHtml += '<tr><th>ID</th><th>Name</th><th>SKU (DB)</th><th>SKU (WC)</th><th>Empty?</th><th>Should Generate?</th></tr>';
+          
+          data.detailed_product_check.forEach(function(product) {
+            debugHtml += '<tr>';
+            debugHtml += '<td>' + product.id + '</td>';
+            debugHtml += '<td>' + product.name + '</td>';
+            debugHtml += '<td>' + (product.sku_from_db || '[EMPTY]') + '</td>';
+            debugHtml += '<td>' + (product.sku_from_wc || '[EMPTY]') + '</td>';
+            debugHtml += '<td>' + product.sku_empty_check + '</td>';
+            debugHtml += '<td>' + product.should_generate + '</td>';
+            debugHtml += '</tr>';
+          });
+          
+          debugHtml += '</table>';
+          debugHtml += '<p><strong>Products Without SKUs (IDs):</strong> [' + data.products_without_skus.join(', ') + ']</p>';
+          debugHtml += '</div>';
+          
+          // Show debug info
+          $('#validation-results').html(debugHtml).removeClass('hidden');
+        } else {
+          showNotification("Debug failed: " + response.data, 'error');
+        }
+        $button.prop("disabled", false).text(originalText);
+      },
+      error: function () {
+        showNotification("Debug request failed.", 'error');
+        $button.prop("disabled", false).text(originalText);
       },
     });
   });

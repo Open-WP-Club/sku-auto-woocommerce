@@ -17,26 +17,38 @@ class SKU_Generator_Helpers
   {
     global $wpdb;
 
+    error_log("Helpers: Getting products without SKUs at offset $offset, HPOS enabled: " . (self::is_hpos_enabled() ? 'Yes' : 'No'));
+
     if (self::is_hpos_enabled()) {
-      $results = $wpdb->get_col($wpdb->prepare("
+      // For HPOS, we need to check the product meta lookup table
+      $query = $wpdb->prepare("
         SELECT p.id 
         FROM {$wpdb->prefix}wc_products p
         LEFT JOIN {$wpdb->prefix}wc_product_meta_lookup pml ON p.id = pml.product_id
         WHERE p.status = 'publish' 
-        AND (pml.sku IS NULL OR pml.sku = '')
+        AND (pml.sku IS NULL OR pml.sku = '' OR TRIM(pml.sku) = '')
         LIMIT %d OFFSET %d
-      ", self::$batch_size, $offset));
+      ", self::$batch_size, $offset);
+
+      error_log("Helpers: HPOS Query: " . $query);
+      $results = $wpdb->get_col($query);
     } else {
-      $results = $wpdb->get_col($wpdb->prepare("
+      // For legacy, check postmeta
+      $query = $wpdb->prepare("
         SELECT p.ID 
         FROM {$wpdb->posts} p
         LEFT JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = '_sku'
         WHERE p.post_type = 'product' 
         AND p.post_status = 'publish'
-        AND (pm.meta_value IS NULL OR pm.meta_value = '')
+        AND (pm.meta_value IS NULL OR pm.meta_value = '' OR TRIM(pm.meta_value) = '')
         LIMIT %d OFFSET %d
-      ", self::$batch_size, $offset));
+      ", self::$batch_size, $offset);
+
+      error_log("Helpers: Legacy Query: " . $query);
+      $results = $wpdb->get_col($query);
     }
+
+    error_log("Helpers: Found " . count($results) . " products without SKUs: " . implode(', ', $results));
 
     return array_map('intval', $results);
   }
@@ -46,23 +58,26 @@ class SKU_Generator_Helpers
     global $wpdb;
 
     if (self::is_hpos_enabled()) {
-      return (int) $wpdb->get_var("
+      $count = (int) $wpdb->get_var("
         SELECT COUNT(p.id) 
         FROM {$wpdb->prefix}wc_products p
         LEFT JOIN {$wpdb->prefix}wc_product_meta_lookup pml ON p.id = pml.product_id
         WHERE p.status = 'publish' 
-        AND (pml.sku IS NULL OR pml.sku = '')
+        AND (pml.sku IS NULL OR pml.sku = '' OR TRIM(pml.sku) = '')
       ");
     } else {
-      return (int) $wpdb->get_var("
+      $count = (int) $wpdb->get_var("
         SELECT COUNT(p.ID) 
         FROM {$wpdb->posts} p
         LEFT JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = '_sku'
         WHERE p.post_type = 'product' 
         AND p.post_status = 'publish'
-        AND (pm.meta_value IS NULL OR pm.meta_value = '')
+        AND (pm.meta_value IS NULL OR pm.meta_value = '' OR TRIM(pm.meta_value) = '')
       ");
     }
+
+    error_log("Helpers: Total products without SKUs: $count");
+    return $count;
   }
 
   public static function get_products_with_skus($offset = 0)
