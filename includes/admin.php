@@ -14,8 +14,8 @@ class SKU_Generator_Admin
   {
     add_submenu_page(
       'woocommerce',
-      __('SKU Generator', 'sku-generator'),
-      __('SKU Generator', 'sku-generator'),
+      __('SKU Automatics', 'sku-generator'),
+      __('SKU Automatics', 'sku-generator'),
       'manage_woocommerce',
       'sku-generator',
       array($this, 'admin_page')
@@ -55,7 +55,7 @@ class SKU_Generator_Admin
   {
     ?>
     <div class="wrap sku-generator-wrap">
-      <h1><?php echo esc_html(__('SKU Generator', 'sku-generator')); ?></h1>
+      <h1><?php echo esc_html(__('WooCommerce SKU Automatics', 'sku-generator')); ?></h1>
 
       <div class="sku-nav-tabs nav-tab-wrapper">
         <a href="#settings" class="nav-tab nav-tab-active" id="settings-tab">
@@ -99,9 +99,18 @@ class SKU_Generator_Admin
           <?php 
           $options = get_option('sku_generator_options', array());
           $copy_to_gtin = isset($options['copy_to_gtin']) ? $options['copy_to_gtin'] : '0';
+          $use_permalink = isset($options['use_permalink']) ? $options['use_permalink'] : '0';
+          
           if ($copy_to_gtin === '1') {
             echo '<div class="sku-info-box">';
             echo '<p><strong>' . __('GTIN Copy Enabled:', 'sku-generator') . '</strong> ' . __('Generated SKUs will automatically be copied to GTIN/UPC/EAN/ISBN fields.', 'sku-generator') . '</p>';
+            echo '</div>';
+          }
+          
+          if ($use_permalink === '1') {
+            echo '<div class="sku-info-box">';
+            echo '<p><strong>' . __('Permalink Mode Enabled:', 'sku-generator') . '</strong> ' . __('SKUs will be generated using product permalinks/slugs for better readability.', 'sku-generator') . '</p>';
+            echo '<p>' . __('Example: A product with permalink "awesome-widget" will get SKU like "PRE-awesome-widget-SUF"', 'sku-generator') . '</p>';
             echo '</div>';
           }
           ?>

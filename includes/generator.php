@@ -13,13 +13,14 @@ class SKU_Generator_Core
     $length = isset($options['pattern_length']) ? intval($options['pattern_length']) : 8;
     $separator = isset($options['separator']) ? $options['separator'] : '-';
     $copy_to_gtin = isset($options['copy_to_gtin']) ? $options['copy_to_gtin'] : '0';
+    $use_permalink = isset($options['use_permalink']) ? $options['use_permalink'] : '0';
 
     // Ensure separator is valid for SKU format
     if (!in_array($separator, array('-', '_'))) {
       $separator = '-';
     }
 
-    // Build character set based on pattern type
+    // Build character set based on pattern type (for fallback random generation)
     $chars = $this->get_character_set($pattern_type);
 
     $max_attempts = 100; // Prevent infinite loops
@@ -56,10 +57,23 @@ class SKU_Generator_Core
         $sku_parts[] = $product->get_id();
       }
 
-      // Add random part if product ID is not used or we need additional uniqueness
-      if (empty($options['include_product_id']) || $options['include_product_id'] != '1') {
-        $random = $this->generate_random_string($chars, $length);
-        $sku_parts[] = $random;
+      // Main SKU part: Use permalink if enabled, otherwise use random/ID
+      if ($use_permalink === '1' && $product) {
+        $permalink_part = $this->get_permalink_part($product);
+        if (!empty($permalink_part)) {
+          $sku_parts[] = $permalink_part;
+        } else {
+          // Fallback to random if permalink is not available
+          $random = $this->generate_random_string($chars, $length);
+          $sku_parts[] = $random;
+          error_log("SKU Generator: Permalink not available for product ID " . $product->get_id() . ", using random fallback");
+        }
+      } else {
+        // Use random part if permalink is not enabled and product ID is not used
+        if (empty($options['include_product_id']) || $options['include_product_id'] != '1') {
+          $random = $this->generate_random_string($chars, $length);
+          $sku_parts[] = $random;
+        }
       }
 
       // Add suffix if set (sanitize it)
@@ -141,26 +155,44 @@ class SKU_Generator_Core
     return '';
   }
 
-  private function sku_exists($sku)
+  private function get_permalink_part($product)
   {
-    global $wpdb;
-
-    // Check if HPOS is enabled
-    if ($this->is_hpos_enabled()) {
-      // Use HPOS tables
-      $exists = $wpdb->get_var($wpdb->prepare("
-        SELECT COUNT(*) FROM {$wpdb->prefix}wc_product_meta_lookup 
-        WHERE sku = %s
-      ", $sku));
-    } else {
-      // Use traditional post meta
-      $exists = $wpdb->get_var($wpdb->prepare("
-        SELECT COUNT(*) FROM {$wpdb->postmeta} 
-        WHERE meta_key = '_sku' AND meta_value = %s
-      ", $sku));
+    if (!$product) {
+      return '';
     }
 
-    return $exists > 0;
+    // Get the product post object
+    $product_post = get_post($product->get_id());
+    if (!$product_post) {
+      return '';
+    }
+
+    // Get the post slug (permalink)
+    $slug = $product_post->post_name;
+
+    // If slug is empty or auto-generated, try to create one from the title
+    if (empty($slug) || is_numeric($slug)) {
+      $slug = sanitize_title($product->get_name());
+    }
+
+    // Clean the slug for SKU use (remove any characters not allowed in SKUs)
+    $clean_slug = $this->sanitize_sku_part($slug);
+
+    // If the cleaned slug is empty, return empty (will trigger fallback)
+    if (empty($clean_slug)) {
+      return '';
+    }
+
+    // Limit length to prevent overly long SKUs (max 50 characters for the slug part)
+    $clean_slug = substr($clean_slug, 0, 50);
+
+    // If it's still too short after cleaning, pad it or return empty for fallback
+    if (strlen($clean_slug) < 3) {
+      return '';
+    }
+
+    error_log("SKU Generator: Using permalink '$clean_slug' for product ID " . $product->get_id());
+    return $clean_slug;
   }
 
   private function copy_sku_to_gtin($product, $sku)
@@ -207,6 +239,28 @@ class SKU_Generator_Core
 
     // Log the action
     error_log("SKU Generator: Copied SKU '$sku' to GTIN field '$used_meta_key' for product ID " . $product->get_id());
+  }
+
+  private function sku_exists($sku)
+  {
+    global $wpdb;
+
+    // Check if HPOS is enabled
+    if ($this->is_hpos_enabled()) {
+      // Use HPOS tables
+      $exists = $wpdb->get_var($wpdb->prepare("
+        SELECT COUNT(*) FROM {$wpdb->prefix}wc_product_meta_lookup 
+        WHERE sku = %s
+      ", $sku));
+    } else {
+      // Use traditional post meta
+      $exists = $wpdb->get_var($wpdb->prepare("
+        SELECT COUNT(*) FROM {$wpdb->postmeta} 
+        WHERE meta_key = '_sku' AND meta_value = %s
+      ", $sku));
+    }
+
+    return $exists > 0;
   }
 
   private function is_hpos_enabled()

@@ -219,17 +219,43 @@ class SKU_Generator_Helpers
     $prefix = isset($options['prefix']) ? $options['prefix'] : '';
     $suffix = isset($options['suffix']) ? $options['suffix'] : '';
     $separator = isset($options['separator']) ? $options['separator'] : '-';
+    $use_permalink = isset($options['use_permalink']) ? $options['use_permalink'] : '0';
 
+    // If we have a prefix, check if SKU starts with it
     if (!empty($prefix) && substr($sku, 0, strlen($prefix)) !== $prefix) {
       return false;
     }
 
+    // If we have a suffix, check if SKU ends with it
     if (!empty($suffix) && substr($sku, -strlen($suffix)) !== $suffix) {
       return false;
     }
 
+    // Check if SKU uses our separator
     if (!empty($separator) && strpos($sku, $separator) === false && (!empty($prefix) || !empty($suffix))) {
       return false;
+    }
+
+    // If using permalink, the SKU should contain readable text (not just random characters)
+    if ($use_permalink === '1') {
+      // Remove prefix and suffix to check the main part
+      $main_part = $sku;
+      if (!empty($prefix)) {
+        $main_part = substr($main_part, strlen($prefix . $separator));
+      }
+      if (!empty($suffix)) {
+        $main_part = substr($main_part, 0, - (strlen($separator . $suffix)));
+      }
+
+      // If using permalink, the main part should contain some letters (not just numbers)
+      if (!preg_match('/[a-zA-Z]/', $main_part)) {
+        return false;
+      }
+
+      // Should not look like a random alphanumeric string
+      if (preg_match('/^[A-Z0-9]{6,}$/', $main_part)) {
+        return false;
+      }
     }
 
     return true;

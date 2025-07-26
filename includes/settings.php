@@ -49,6 +49,14 @@ class SKU_Generator_Settings
 
     // Pattern Settings
     add_settings_field(
+      'use_permalink',
+      __('Use Product Permalink', 'sku-generator'),
+      array($this, 'use_permalink_field'),
+      'sku-generator',
+      'sku_generator_main'
+    );
+
+    add_settings_field(
       'pattern_type',
       __('SKU Pattern Type', 'sku-generator'),
       array($this, 'pattern_type_field'),
@@ -145,6 +153,7 @@ class SKU_Generator_Settings
     $sanitized['include_category'] = isset($input['include_category']) ? '1' : '0';
     $sanitized['include_date'] = isset($input['include_date']) ? '1' : '0';
     $sanitized['copy_to_gtin'] = isset($input['copy_to_gtin']) ? '1' : '0';
+    $sanitized['use_permalink'] = isset($input['use_permalink']) ? '1' : '0';
 
     // Sanitize category chars
     $cat_chars = intval($input['category_chars'] ?? 2);
@@ -205,6 +214,19 @@ class SKU_Generator_Settings
   <?php
   }
 
+  public function use_permalink_field()
+  {
+    $options = get_option('sku_generator_options', array());
+    $use_permalink = $options['use_permalink'] ?? '0';
+  ?>
+    <div class="sku-checkbox-group">
+      <input type="checkbox" id="use_permalink" name="sku_generator_options[use_permalink]" value="1" <?php checked($use_permalink, '1'); ?> />
+      <label for="use_permalink"><?php _e('Use product permalink (URL slug) as the main part of SKU', 'sku-generator'); ?></label>
+    </div>
+    <p class="description"><?php _e('When enabled, the product\'s permalink/slug will be used instead of random characters. Example: "awesome-widget" becomes "PRE-awesome-widget-SUF"', 'sku-generator'); ?></p>
+  <?php
+  }
+
   public function pattern_type_field()
   {
     $options = get_option('sku_generator_options', array());
@@ -217,7 +239,7 @@ class SKU_Generator_Settings
         <option value="alphabetic" <?php selected($pattern_type, 'alphabetic'); ?>><?php _e('Alphabetic Only (A-Z)', 'sku-generator'); ?></option>
         <option value="custom" <?php selected($pattern_type, 'custom'); ?>><?php _e('Custom Pattern', 'sku-generator'); ?></option>
       </select>
-      <p class="description"><?php _e('Type of characters to use in the random part of the SKU.', 'sku-generator'); ?></p>
+      <p class="description"><?php _e('Type of characters to use in the random part of the SKU (only used when permalink mode is disabled).', 'sku-generator'); ?></p>
     </div>
   <?php
   }
@@ -229,7 +251,7 @@ class SKU_Generator_Settings
   ?>
     <div class="sku-form-group">
       <input type="number" min="4" max="32" name="sku_generator_options[pattern_length]" value="<?php echo intval($length); ?>" />
-      <p class="description"><?php _e('Length of the random part of the SKU (4-32 characters).', 'sku-generator'); ?></p>
+      <p class="description"><?php _e('Length of the random part of the SKU (4-32 characters, only used when permalink mode is disabled).', 'sku-generator'); ?></p>
     </div>
   <?php
   }

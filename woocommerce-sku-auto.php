@@ -1,13 +1,17 @@
 <?php
 
 /**
- * Plugin Name: SKU Generator
- * Description: Automatically generates SKUs for WooCommerce products with validation
+ * Plugin Name: WooCommerce SKU Automatics
+ * Description: Comprehensive SKU generation and management for WooCommerce with validation, cleanup tools, and GTIN integration
  * Version: 1.1.0
- * Author: Your Name
+ * Author: openwpclub.com
+ * Author URI: https://openwpclub.com
  * Text Domain: sku-generator
+ * Domain Path: /languages
  * Requires at least: 6.0
  * Requires PHP: 7.4
+ * WC requires at least: 8.0
+ * WC tested up to: 9.0
  */
 
 defined('ABSPATH') || exit;
@@ -23,7 +27,7 @@ function sku_generator_check_woocommerce()
   if (!class_exists('WooCommerce')) {
     add_action('admin_notices', function () {
       echo '<div class="notice notice-error"><p>' .
-        __('SKU Generator requires WooCommerce to be installed and active.', 'sku-generator') .
+        __('WooCommerce SKU Automatics requires WooCommerce to be installed and active.', 'sku-generator') .
         '</p></div>';
     });
     return false;
@@ -82,7 +86,8 @@ register_activation_hook(__FILE__, function () {
     'category_chars' => 2,
     'include_date' => '0',
     'date_format' => 'Ymd',
-    'copy_to_gtin' => '0'
+    'copy_to_gtin' => '0',
+    'use_permalink' => '0'
   );
 
   if (!get_option('sku_generator_options')) {
