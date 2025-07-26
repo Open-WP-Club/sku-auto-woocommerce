@@ -3,7 +3,7 @@
 /**
  * Plugin Name: WooCommerce SKU Automatics
  * Description: Comprehensive SKU generation and management for WooCommerce with validation, cleanup tools, and GTIN integration
- * Version: 1.1.0
+ * Version: 2.0.0
  * Author: openwpclub.com
  * Author URI: https://openwpclub.com
  * Text Domain: sku-generator
@@ -12,12 +12,13 @@
  * Requires PHP: 7.4
  * WC requires at least: 8.0
  * WC tested up to: 9.0
+ * Requires Plugins: woocommerce
  */
 
 defined('ABSPATH') || exit;
 
 // Define plugin constants
-define('SKU_GENERATOR_VERSION', '1.1.0');
+define('SKU_GENERATOR_VERSION', '2.0.0');
 define('SKU_GENERATOR_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('SKU_GENERATOR_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -68,6 +69,29 @@ function sku_generator_init()
   new SKU_Generator_Ajax_Debug();
   new SKU_Generator_Settings();
 }
+
+// Declare HPOS compatibility
+add_action('before_woocommerce_init', function () {
+  if (class_exists('\Automattic\WooCommerce\Utilities\FeaturesUtil')) {
+    \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('custom_order_tables', __FILE__, true);
+  }
+});
+
+// Add plugin action links
+add_filter('plugin_action_links_' . plugin_basename(__FILE__), function ($links) {
+  $settings_link = '<a href="' . admin_url('admin.php?page=sku-generator') . '">' . __('Settings', 'sku-generator') . '</a>';
+  array_unshift($links, $settings_link);
+  return $links;
+});
+
+// Add plugin row meta
+add_filter('plugin_row_meta', function ($plugin_meta, $plugin_file) {
+  if (plugin_basename(__FILE__) === $plugin_file) {
+    $plugin_meta[] = '<strong>' . __('HPOS Compatible', 'sku-generator') . '</strong>';
+    $plugin_meta[] = '<a href="' . admin_url('admin.php?page=sku-generator&tab=validate') . '">' . __('Validate SKUs', 'sku-generator') . '</a>';
+  }
+  return $plugin_meta;
+}, 10, 2);
 
 // Hook into WordPress
 add_action('plugins_loaded', 'sku_generator_init');
