@@ -161,35 +161,39 @@ class SKU_Generator_Settings
   {
     $options = get_option('sku_generator_options', array());
     $prefix = $options['prefix'] ?? '';
-    printf(
-      '<input type="text" name="sku_generator_options[prefix]" value="%s" maxlength="20" />',
-      esc_attr($prefix)
-    );
-    echo '<p class="description">' . __('Add a prefix to the beginning of each SKU (only letters, numbers, - and _).', 'sku-generator') . '</p>';
+?>
+    <div class="sku-form-group">
+      <input type="text" name="sku_generator_options[prefix]" value="<?php echo esc_attr($prefix); ?>" maxlength="20" />
+      <p class="description"><?php _e('Add a prefix to the beginning of each SKU (only letters, numbers, - and _).', 'sku-generator'); ?></p>
+    </div>
+  <?php
   }
 
   public function suffix_field()
   {
     $options = get_option('sku_generator_options', array());
     $suffix = $options['suffix'] ?? '';
-    printf(
-      '<input type="text" name="sku_generator_options[suffix]" value="%s" maxlength="20" />',
-      esc_attr($suffix)
-    );
-    echo '<p class="description">' . __('Add a suffix to the end of each SKU (only letters, numbers, - and _).', 'sku-generator') . '</p>';
+  ?>
+    <div class="sku-form-group">
+      <input type="text" name="sku_generator_options[suffix]" value="<?php echo esc_attr($suffix); ?>" maxlength="20" />
+      <p class="description"><?php _e('Add a suffix to the end of each SKU (only letters, numbers, - and _).', 'sku-generator'); ?></p>
+    </div>
+  <?php
   }
 
   public function separator_field()
   {
     $options = get_option('sku_generator_options', array());
     $separator = $options['separator'] ?? '-';
-?>
-    <select name="sku_generator_options[separator]">
-      <option value="-" <?php selected($separator, '-'); ?>><?php _e('Hyphen (-)', 'sku-generator'); ?></option>
-      <option value="_" <?php selected($separator, '_'); ?>><?php _e('Underscore (_)', 'sku-generator'); ?></option>
-    </select>
+  ?>
+    <div class="sku-form-group">
+      <select name="sku_generator_options[separator]">
+        <option value="-" <?php selected($separator, '-'); ?>><?php _e('Hyphen (-)', 'sku-generator'); ?></option>
+        <option value="_" <?php selected($separator, '_'); ?>><?php _e('Underscore (_)', 'sku-generator'); ?></option>
+      </select>
+      <p class="description"><?php _e('Character to separate SKU parts.', 'sku-generator'); ?></p>
+    </div>
   <?php
-    echo '<p class="description">' . __('Character to separate SKU parts.', 'sku-generator') . '</p>';
   }
 
   public function pattern_type_field()
@@ -197,69 +201,76 @@ class SKU_Generator_Settings
     $options = get_option('sku_generator_options', array());
     $pattern_type = $options['pattern_type'] ?? 'alphanumeric';
   ?>
-    <select name="sku_generator_options[pattern_type]">
-      <option value="alphanumeric" <?php selected($pattern_type, 'alphanumeric'); ?>><?php _e('Alphanumeric (A-Z, 0-9)', 'sku-generator'); ?></option>
-      <option value="numeric" <?php selected($pattern_type, 'numeric'); ?>><?php _e('Numeric Only (0-9)', 'sku-generator'); ?></option>
-      <option value="alphabetic" <?php selected($pattern_type, 'alphabetic'); ?>><?php _e('Alphabetic Only (A-Z)', 'sku-generator'); ?></option>
-      <option value="custom" <?php selected($pattern_type, 'custom'); ?>><?php _e('Custom Pattern', 'sku-generator'); ?></option>
-    </select>
+    <div class="sku-form-group">
+      <select name="sku_generator_options[pattern_type]">
+        <option value="alphanumeric" <?php selected($pattern_type, 'alphanumeric'); ?>><?php _e('Alphanumeric (A-Z, 0-9)', 'sku-generator'); ?></option>
+        <option value="numeric" <?php selected($pattern_type, 'numeric'); ?>><?php _e('Numeric Only (0-9)', 'sku-generator'); ?></option>
+        <option value="alphabetic" <?php selected($pattern_type, 'alphabetic'); ?>><?php _e('Alphabetic Only (A-Z)', 'sku-generator'); ?></option>
+        <option value="custom" <?php selected($pattern_type, 'custom'); ?>><?php _e('Custom Pattern', 'sku-generator'); ?></option>
+      </select>
+      <p class="description"><?php _e('Type of characters to use in the random part of the SKU.', 'sku-generator'); ?></p>
+    </div>
   <?php
-    echo '<p class="description">' . __('Type of characters to use in the random part of the SKU.', 'sku-generator') . '</p>';
   }
 
   public function pattern_length_field()
   {
     $options = get_option('sku_generator_options', array());
     $length = $options['pattern_length'] ?? 8;
-    printf(
-      '<input type="number" min="4" max="32" name="sku_generator_options[pattern_length]" value="%d" />',
-      intval($length)
-    );
-    echo '<p class="description">' . __('Length of the random part of the SKU (4-32 characters).', 'sku-generator') . '</p>';
+  ?>
+    <div class="sku-form-group">
+      <input type="number" min="4" max="32" name="sku_generator_options[pattern_length]" value="<?php echo intval($length); ?>" />
+      <p class="description"><?php _e('Length of the random part of the SKU (4-32 characters).', 'sku-generator'); ?></p>
+    </div>
+  <?php
   }
 
   public function include_product_id_field()
   {
     $options = get_option('sku_generator_options', array());
     $include_product_id = $options['include_product_id'] ?? '0';
-    printf(
-      '<input type="checkbox" name="sku_generator_options[include_product_id]" value="1" %s />',
-      checked($include_product_id, '1', false)
-    );
-    echo '<label for="sku_generator_options[include_product_id]">' . __('Include product ID in SKU', 'sku-generator') . '</label>';
+  ?>
+    <div class="sku-checkbox-group">
+      <input type="checkbox" id="include_product_id" name="sku_generator_options[include_product_id]" value="1" <?php checked($include_product_id, '1'); ?> />
+      <label for="include_product_id"><?php _e('Include product ID in SKU', 'sku-generator'); ?></label>
+    </div>
+  <?php
   }
 
   public function include_category_field()
   {
     $options = get_option('sku_generator_options', array());
     $include_category = $options['include_category'] ?? '0';
-    printf(
-      '<input type="checkbox" name="sku_generator_options[include_category]" value="1" %s />',
-      checked($include_category, '1', false)
-    );
-    echo '<label for="sku_generator_options[include_category]">' . __('Include product category code in SKU', 'sku-generator') . '</label>';
+  ?>
+    <div class="sku-checkbox-group">
+      <input type="checkbox" id="include_category" name="sku_generator_options[include_category]" value="1" <?php checked($include_category, '1'); ?> />
+      <label for="include_category"><?php _e('Include product category code in SKU', 'sku-generator'); ?></label>
+    </div>
+  <?php
   }
 
   public function category_chars_field()
   {
     $options = get_option('sku_generator_options', array());
     $category_chars = $options['category_chars'] ?? 2;
-    printf(
-      '<input type="number" min="1" max="5" name="sku_generator_options[category_chars]" value="%d" />',
-      intval($category_chars)
-    );
-    echo '<p class="description">' . __('Number of characters to use from category name (1-5).', 'sku-generator') . '</p>';
+  ?>
+    <div class="sku-form-group">
+      <input type="number" min="1" max="5" name="sku_generator_options[category_chars]" value="<?php echo intval($category_chars); ?>" />
+      <p class="description"><?php _e('Number of characters to use from category name (1-5).', 'sku-generator'); ?></p>
+    </div>
+  <?php
   }
 
   public function include_date_field()
   {
     $options = get_option('sku_generator_options', array());
     $include_date = $options['include_date'] ?? '0';
-    printf(
-      '<input type="checkbox" name="sku_generator_options[include_date]" value="1" %s />',
-      checked($include_date, '1', false)
-    );
-    echo '<label for="sku_generator_options[include_date]">' . __('Include date in SKU', 'sku-generator') . '</label>';
+  ?>
+    <div class="sku-checkbox-group">
+      <input type="checkbox" id="include_date" name="sku_generator_options[include_date]" value="1" <?php checked($include_date, '1'); ?> />
+      <label for="include_date"><?php _e('Include date in SKU', 'sku-generator'); ?></label>
+    </div>
+  <?php
   }
 
   public function date_format_field()
@@ -267,13 +278,15 @@ class SKU_Generator_Settings
     $options = get_option('sku_generator_options', array());
     $date_format = $options['date_format'] ?? 'Ymd';
   ?>
-    <select name="sku_generator_options[date_format]">
-      <option value="Ymd" <?php selected($date_format, 'Ymd'); ?>><?php _e('YYYYMMDD', 'sku-generator'); ?></option>
-      <option value="ymd" <?php selected($date_format, 'ymd'); ?>><?php _e('YYMMDD', 'sku-generator'); ?></option>
-      <option value="ym" <?php selected($date_format, 'ym'); ?>><?php _e('YYMM', 'sku-generator'); ?></option>
-      <option value="y" <?php selected($date_format, 'y'); ?>><?php _e('YY', 'sku-generator'); ?></option>
-    </select>
+    <div class="sku-form-group">
+      <select name="sku_generator_options[date_format]">
+        <option value="Ymd" <?php selected($date_format, 'Ymd'); ?>><?php _e('YYYYMMDD', 'sku-generator'); ?></option>
+        <option value="ymd" <?php selected($date_format, 'ymd'); ?>><?php _e('YYMMDD', 'sku-generator'); ?></option>
+        <option value="ym" <?php selected($date_format, 'ym'); ?>><?php _e('YYMM', 'sku-generator'); ?></option>
+        <option value="y" <?php selected($date_format, 'y'); ?>><?php _e('YY', 'sku-generator'); ?></option>
+      </select>
+      <p class="description"><?php _e('Date format to use when including dates in SKUs.', 'sku-generator'); ?></p>
+    </div>
 <?php
-    echo '<p class="description">' . __('Date format to use when including dates in SKUs.', 'sku-generator') . '</p>';
   }
 }

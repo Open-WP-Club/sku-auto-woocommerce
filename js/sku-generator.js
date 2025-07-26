@@ -8,9 +8,9 @@ jQuery(document).ready(function ($) {
     $(this).addClass('nav-tab-active');
     
     // Show corresponding content
-    $('.tab-content').hide();
+    $('.tab-content').removeClass('active').hide();
     const target = $(this).attr('href');
-    $(target + '-content').show();
+    $(target + '-content').addClass('active').show();
   });
 
   // Generate SKUs functionality
@@ -18,12 +18,15 @@ jQuery(document).ready(function ($) {
     e.preventDefault();
 
     const $button = $(this);
-    const $progress = $("#progress-bar");
+    const $progress = $("#progress-container");
     const $progressBar = $progress.find("progress");
     const $progressText = $("#progress-text");
 
-    $button.prop("disabled", true);
-    $progress.show();
+    // Disable button and show progress
+    $button.prop("disabled", true).addClass('sku-loading');
+    $progress.removeClass('hidden');
+    $progressBar.val(0);
+    $progressText.text('0%');
 
     function generateSKUs(offset = 0) {
       $.ajax({
@@ -39,27 +42,29 @@ jQuery(document).ready(function ($) {
             if (response.data.complete) {
               $progressBar.val(100);
               $progressText.text("100%");
-              $button.prop("disabled", false);
-              $progress.hide();
-              alert(response.data.message);
+              $button.prop("disabled", false).removeClass('sku-loading');
+              $progress.addClass('hidden');
+              showNotification(response.data.message, 'success');
             } else {
               $progressBar.val(response.data.progress);
               $progressText.text(response.data.progress + "%");
-              // Continue with next batch
               generateSKUs(response.data.offset);
             }
           } else {
-            alert("Error generating SKUs. Please try again.");
-            $button.prop("disabled", false);
-            $progress.hide();
+            showNotification("Error generating SKUs. Please try again.", 'error');
+            resetGenerateButton();
           }
         },
         error: function () {
-          alert("Error generating SKUs. Please try again.");
-          $button.prop("disabled", false);
-          $progress.hide();
+          showNotification("Error generating SKUs. Please try again.", 'error');
+          resetGenerateButton();
         },
       });
+    }
+
+    function resetGenerateButton() {
+      $button.prop("disabled", false).removeClass('sku-loading');
+      $progress.addClass('hidden');
     }
 
     generateSKUs();
@@ -70,18 +75,19 @@ jQuery(document).ready(function ($) {
     e.preventDefault();
 
     const $button = $(this);
-    const $progress = $("#validation-progress");
+    const $progress = $("#validation-progress-container");
     const $progressBar = $progress.find("progress");
     const $progressText = $("#validation-progress-text");
     const $results = $("#validation-results");
     const $fixButton = $("#fix-invalid-skus");
 
-    $button.prop("disabled", true);
-    $progress.show();
-    $results.hide();
-    $fixButton.hide();
+    // Reset UI
+    $button.prop("disabled", true).addClass('sku-loading');
+    $progress.removeClass('hidden');
+    $results.addClass('hidden');
+    $fixButton.addClass('hidden');
     $progressBar.val(0);
-    $progressText.text("0%");
+    $progressText.text('0%');
 
     function validateSKUs(offset = 0) {
       $.ajax({
@@ -96,29 +102,31 @@ jQuery(document).ready(function ($) {
           if (response.success) {
             if (response.data.complete) {
               $progressBar.val(100);
-              $progressText.text("100%");
-              $button.prop("disabled", false);
-              $progress.hide();
+              $progressText.text('100%');
+              $button.prop("disabled", false).removeClass('sku-loading');
+              $progress.addClass('hidden');
               
               displayValidationResults(response.data);
             } else {
               $progressBar.val(response.data.progress);
               $progressText.text(response.data.progress + "%");
-              // Continue with next batch
               validateSKUs(response.data.offset);
             }
           } else {
-            alert("Error validating SKUs. Please try again.");
-            $button.prop("disabled", false);
-            $progress.hide();
+            showNotification("Error validating SKUs. Please try again.", 'error');
+            resetValidateButton();
           }
         },
         error: function () {
-          alert("Error validating SKUs. Please try again.");
-          $button.prop("disabled", false);
-          $progress.hide();
+          showNotification("Error validating SKUs. Please try again.", 'error');
+          resetValidateButton();
         },
       });
+    }
+
+    function resetValidateButton() {
+      $button.prop("disabled", false).removeClass('sku-loading');
+      $progress.addClass('hidden');
     }
 
     validateSKUs();
@@ -133,7 +141,9 @@ jQuery(document).ready(function ($) {
     }
 
     const $button = $(this);
-    $button.prop("disabled", true).text("Fixing...");
+    const originalText = $button.text();
+    
+    $button.prop("disabled", true).addClass('sku-loading').text("Fixing...");
 
     $.ajax({
       url: skuGeneratorAjax.ajaxurl,
@@ -144,21 +154,52 @@ jQuery(document).ready(function ($) {
       },
       success: function (response) {
         if (response.success) {
-          alert(response.data.message);
-          // Clear validation results
-          $("#validation-results").hide();
-          $button.hide();
+          showNotification(response.data.message, 'success');
+          $("#validation-results").addClass('hidden');
+          $button.addClass('hidden');
         } else {
-          alert("Error fixing SKUs. Please try again.");
+          showNotification("Error fixing SKUs. Please try again.", 'error');
         }
-        $button.prop("disabled", false).text("Fix Invalid SKUs");
+        $button.prop("disabled", false).removeClass('sku-loading').text(originalText);
       },
       error: function () {
-        alert("Error fixing SKUs. Please try again.");
-        $button.prop("disabled", false).text("Fix Invalid SKUs");
+        showNotification("Error fixing SKUs. Please try again.", 'error');
+        $button.prop("disabled", false).removeClass('sku-loading').text(originalText);
       },
     });
   });
+
+  // Notification system
+  function showNotification(message, type = 'info') {
+    // Remove existing notifications
+    $('.sku-notification').remove();
+    
+    const typeClass = type === 'error' ? 'notice-error' : 
+                     type === 'success' ? 'notice-success' : 'notice-info';
+    
+    const $notification = $(`
+      <div class="notice ${typeClass} is-dismissible sku-notification" style="margin: 20px 0;">
+        <p>${message}</p>
+        <button type="button" class="notice-dismiss">
+          <span class="screen-reader-text">Dismiss this notice.</span>
+        </button>
+      </div>
+    `);
+    
+    $('.sku-generator-wrap h1').after($notification);
+    
+    // Auto dismiss after 5 seconds for success messages
+    if (type === 'success') {
+      setTimeout(() => {
+        $notification.fadeOut();
+      }, 5000);
+    }
+    
+    // Handle manual dismiss
+    $notification.on('click', '.notice-dismiss', function() {
+      $notification.fadeOut();
+    });
+  }
 
   function displayValidationResults(data) {
     const $results = $("#validation-results");
@@ -172,7 +213,7 @@ jQuery(document).ready(function ($) {
     // Create summary
     if (data.total_invalid === 0 && data.total_duplicates === 0) {
       summaryHtml = `
-        <div class="validation-summary success">
+        <div class="sku-summary success">
           <h4>✅ All SKUs are valid!</h4>
           <p>Scanned ${data.total_products} products. No issues found.</p>
         </div>
@@ -180,18 +221,18 @@ jQuery(document).ready(function ($) {
     } else {
       const totalIssues = data.total_invalid + data.total_duplicates;
       summaryHtml = `
-        <div class="validation-summary warning">
+        <div class="sku-summary warning">
           <h4>⚠️ ${totalIssues} SKU issues found</h4>
           <p>Scanned ${data.total_products} products:</p>
           <ul>
-            <li>${data.total_invalid} products with invalid SKU format</li>
-            <li>${data.total_duplicates} sets of duplicate SKUs</li>
+            <li><strong>${data.total_invalid}</strong> products with invalid SKU format</li>
+            <li><strong>${data.total_duplicates}</strong> sets of duplicate SKUs</li>
           </ul>
         </div>
       `;
 
       // Show fix button if there are issues
-      $fixButton.show();
+      $fixButton.removeClass('hidden');
     }
 
     $summary.html(summaryHtml);
@@ -199,36 +240,44 @@ jQuery(document).ready(function ($) {
     // Create detailed list of invalid SKUs
     if (data.invalid_skus && data.invalid_skus.length > 0) {
       invalidListHtml += '<h4>Invalid SKU Formats:</h4>';
+      invalidListHtml += '<div class="sku-invalid-items">';
+      
       data.invalid_skus.forEach(function(item) {
         invalidListHtml += `
-          <div class="invalid-sku-item">
-            <strong>Product ID ${item.product_id}:</strong> ${item.product_name}<br>
-            <strong>Current SKU:</strong> "${item.sku}"<br>
-            <strong>Issues:</strong> ${item.issues.join(', ')}
+          <div class="sku-invalid-item">
+            <div class="product-info">Product ID ${item.product_id}: ${item.product_name}</div>
+            <div><strong>Current SKU:</strong> <span class="sku-value">${item.sku}</span></div>
+            <div class="issues"><strong>Issues:</strong> ${item.issues.join(', ')}</div>
           </div>
         `;
       });
+      
+      invalidListHtml += '</div>';
     }
 
     // Create detailed list of duplicate SKUs
     if (data.duplicate_skus && Object.keys(data.duplicate_skus).length > 0) {
       invalidListHtml += '<h4>Duplicate SKUs:</h4>';
+      invalidListHtml += '<div class="sku-invalid-items">';
+      
       Object.keys(data.duplicate_skus).forEach(function(sku) {
         const products = data.duplicate_skus[sku];
         invalidListHtml += `
-          <div class="invalid-sku-item">
-            <strong>Duplicate SKU:</strong> "${sku}"<br>
-            <strong>Found in ${products.length} products:</strong><br>
-            <ul>
+          <div class="sku-invalid-item">
+            <div class="product-info">Duplicate SKU: <span class="sku-value">${sku}</span></div>
+            <div><strong>Found in ${products.length} products:</strong></div>
+            <ul style="margin: 8px 0 0 20px;">
         `;
         products.forEach(function(product) {
           invalidListHtml += `<li>ID ${product.id}: ${product.name}</li>`;
         });
         invalidListHtml += '</ul></div>';
       });
+      
+      invalidListHtml += '</div>';
     }
 
     $invalidList.html(invalidListHtml);
-    $results.show();
+    $results.removeClass('hidden');
   }
 });
