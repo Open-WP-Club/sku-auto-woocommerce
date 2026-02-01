@@ -131,6 +131,67 @@ jQuery(document).ready(function ($) {
     copySkusToGtin();
   });
 
+  // Generate Variation SKUs functionality
+  $("#generate-variation-skus").on("click", function (e) {
+    e.preventDefault();
+
+    if (!confirm("This will generate SKUs for all product variations based on their parent SKU (e.g., PARENT-1, PARENT-2, etc.). Continue?")) {
+      return;
+    }
+
+    const $button = $(this);
+    const $progress = $("#variation-progress-container");
+    const $progressBar = $progress.find("progress");
+    const $progressText = $("#variation-progress-text");
+
+    // Disable button and show progress
+    $button.prop("disabled", true).addClass('sku-loading');
+    $progress.removeClass('hidden');
+    $progressBar.val(0);
+    $progressText.text('0%');
+
+    function generateVariationSkus(offset = 0) {
+      $.ajax({
+        url: skuGeneratorAjax.ajaxurl,
+        type: "POST",
+        data: {
+          action: "generate_variation_skus",
+          nonce: skuGeneratorAjax.nonce,
+          offset: offset,
+        },
+        success: function (response) {
+          if (response.success) {
+            if (response.data.complete) {
+              $progressBar.val(100);
+              $progressText.text("100%");
+              $button.prop("disabled", false).removeClass('sku-loading');
+              $progress.addClass('hidden');
+              showNotification(response.data.message, 'success');
+            } else {
+              $progressBar.val(response.data.progress);
+              $progressText.text(response.data.progress + "%");
+              generateVariationSkus(response.data.offset);
+            }
+          } else {
+            showNotification("Error generating variation SKUs. Please try again.", 'error');
+            resetVariationButton();
+          }
+        },
+        error: function () {
+          showNotification("Error generating variation SKUs. Please try again.", 'error');
+          resetVariationButton();
+        },
+      });
+    }
+
+    function resetVariationButton() {
+      $button.prop("disabled", false).removeClass('sku-loading');
+      $progress.addClass('hidden');
+    }
+
+    generateVariationSkus();
+  });
+
   // Cleanup functionality
   $("#remove-all-skus").on("click", function (e) {
     e.preventDefault();

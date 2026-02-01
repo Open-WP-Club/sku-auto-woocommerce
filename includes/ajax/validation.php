@@ -1,49 +1,63 @@
 <?php
 
+/**
+ * SKU Generator AJAX - Validation
+ *
+ * Handles AJAX requests for SKU validation and fixing.
+ *
+ * @package SKU_Generator
+ * @since 2.0.0
+ */
+
 defined('ABSPATH') || exit;
 
 class SKU_Generator_Ajax_Validation
 {
   public function __construct()
   {
-    add_action('wp_ajax_validate_skus', array($this, 'ajax_validate_skus'));
-    add_action('wp_ajax_fix_invalid_skus', array($this, 'ajax_fix_invalid_skus'));
+    add_action('wp_ajax_validate_skus', [$this, 'ajax_validate_skus']);
+    add_action('wp_ajax_fix_invalid_skus', [$this, 'ajax_fix_invalid_skus']);
   }
 
-  public function ajax_validate_skus()
+  /**
+   * Handle SKU validation AJAX request
+   *
+   * @since 2.0.0
+   */
+  public function ajax_validate_skus(): void
   {
     try {
       check_ajax_referer('sku_generator_nonce', 'nonce');
 
       if (!current_user_can('manage_woocommerce')) {
-        wp_send_json_error('Insufficient permissions');
+        wp_send_json_error(__('Insufficient permissions', 'sku-generator'));
         return;
       }
 
-      $offset = isset($_POST['offset']) ? intval($_POST['offset']) : 0;
-      error_log("SKU Validation: Starting batch at offset $offset");
+      $offset = isset($_POST['offset']) ? (int) $_POST['offset'] : 0;
+      SKU_Generator_Helpers::debug_log("Validation: Starting batch at offset $offset");
 
       global $wpdb;
 
       if ($offset === 0) {
         if (SKU_Generator_Helpers::is_hpos_enabled()) {
           $total_products = (int) $wpdb->get_var("SELECT COUNT(id) FROM {$wpdb->prefix}wc_products WHERE status = 'publish'");
-          error_log("SKU Validation: HPOS enabled - found $total_products total products");
         } else {
           $total_products = (int) $wpdb->get_var("SELECT COUNT(ID) FROM {$wpdb->posts} WHERE post_type = 'product' AND post_status = 'publish'");
-          error_log("SKU Validation: Legacy mode - found $total_products total products");
         }
 
+        SKU_Generator_Helpers::debug_log("Validation: Found $total_products total products");
+
         if ($total_products === 0) {
-          wp_send_json_success(array(
+          wp_send_json_success([
             'complete' => true,
             'total_products' => 0,
             'total_invalid' => 0,
             'total_duplicates' => 0,
-            'invalid_skus' => array(),
-            'duplicate_skus' => array(),
-            'progress' => 100
-          ));
+            'invalid_skus' => [],
+            'duplicate_skus' => [],
+            'progress' => 100,
+          ]);
           return;
         }
 
@@ -59,26 +73,25 @@ class SKU_Generator_Ajax_Validation
 
       if (SKU_Generator_Helpers::is_hpos_enabled()) {
         $product_ids = $wpdb->get_col($wpdb->prepare("
-          SELECT id FROM {$wpdb->prefix}wc_products 
-          WHERE status = 'publish' 
+          SELECT id FROM {$wpdb->prefix}wc_products
+          WHERE status = 'publish'
           LIMIT %d OFFSET %d
         ", $batch_size, $offset));
       } else {
         $product_ids = $wpdb->get_col($wpdb->prepare("
-          SELECT ID FROM {$wpdb->posts} 
-          WHERE post_type = 'product' AND post_status = 'publish' 
+          SELECT ID FROM {$wpdb->posts}
+          WHERE post_type = 'product' AND post_status = 'publish'
           LIMIT %d OFFSET %d
         ", $batch_size, $offset));
       }
 
-      error_log("SKU Validation: Found " . count($product_ids) . " product IDs in this batch");
+      SKU_Generator_Helpers::debug_log("Validation: Found " . count($product_ids) . " products in this batch");
 
-      $invalid_skus = get_transient('sku_validation_invalid') ?: array();
-      $duplicate_skus = get_transient('sku_validation_duplicates') ?: array();
-      $all_skus = get_transient('sku_validation_all_skus') ?: array();
+      $invalid_skus = get_transient('sku_validation_invalid') ?: [];
+      $duplicate_skus = get_transient('sku_validation_duplicates') ?: [];
+      $all_skus = get_transient('sku_validation_all_skus') ?: [];
 
       $validator = new SKU_Generator_Validator();
-      $products_with_skus = 0;
 
       foreach ($product_ids as $product_id) {
         $product = wc_get_product($product_id);
@@ -93,34 +106,32 @@ class SKU_Generator_Ajax_Validation
           continue;
         }
 
-        $products_with_skus++;
-
         if (!isset($all_skus[$sku])) {
-          $all_skus[$sku] = array();
+          $all_skus[$sku] = [];
         }
-        $all_skus[$sku][] = array(
-          'id' => $product_id,
-          'name' => $product_name
-        );
+        $all_skus[$sku][] = [
+          'id' => (int) $product_id,
+          'name' => $product_name,
+        ];
 
         $validation_result = $validator->validate_sku_format($sku);
         if (!$validation_result['valid']) {
-          $invalid_skus[] = array(
-            'product_id' => $product_id,
+          $invalid_skus[] = [
+            'product_id' => (int) $product_id,
             'product_name' => $product_name,
             'sku' => $sku,
-            'issues' => $validation_result['issues']
-          );
-          error_log("SKU Validation: Product ID $product_id has invalid SKU '$sku': " . implode(', ', $validation_result['issues']));
+            'issues' => $validation_result['issues'],
+          ];
+          SKU_Generator_Helpers::debug_log("Validation: Product ID $product_id has invalid SKU '$sku'");
         }
       }
 
       // Update duplicate detection
-      $duplicate_skus = array();
+      $duplicate_skus = [];
       foreach ($all_skus as $sku => $products_with_sku) {
         if (count($products_with_sku) > 1) {
           $duplicate_skus[$sku] = $products_with_sku;
-          error_log("SKU Validation: Found duplicate SKU '$sku' in " . count($products_with_sku) . " products");
+          SKU_Generator_Helpers::debug_log("Validation: Found duplicate SKU '$sku' in " . count($products_with_sku) . " products");
         }
       }
 
@@ -128,50 +139,57 @@ class SKU_Generator_Ajax_Validation
       set_transient('sku_validation_duplicates', $duplicate_skus, 300);
       set_transient('sku_validation_all_skus', $all_skus, 300);
 
-      $progress = $total_products > 0 ? min(100, round(($offset + count($product_ids)) / $total_products * 100)) : 100;
+      $progress = $total_products > 0
+        ? min(100, round(($offset + count($product_ids)) / $total_products * 100))
+        : 100;
 
       if (count($product_ids) < $batch_size || $progress >= 100) {
         $total_invalid = count($invalid_skus);
         $total_duplicates = count($duplicate_skus);
         $total_products_with_skus = count($all_skus);
 
-        error_log("SKU Validation: Complete - $total_products_with_skus products with SKUs, $total_invalid invalid, $total_duplicates duplicates");
+        SKU_Generator_Helpers::debug_log("Validation: Complete - $total_products_with_skus products with SKUs, $total_invalid invalid, $total_duplicates duplicates");
 
-        wp_send_json_success(array(
+        wp_send_json_success([
           'complete' => true,
           'total_products' => $total_products_with_skus,
           'total_invalid' => $total_invalid,
           'total_duplicates' => $total_duplicates,
           'invalid_skus' => $invalid_skus,
           'duplicate_skus' => $duplicate_skus,
-          'progress' => 100
-        ));
+          'progress' => 100,
+        ]);
       } else {
-        wp_send_json_success(array(
+        wp_send_json_success([
           'complete' => false,
           'offset' => $offset + $batch_size,
           'progress' => $progress,
-          'total' => $total_products
-        ));
+          'total' => $total_products,
+        ]);
       }
-    } catch (Exception $e) {
-      error_log('SKU Validation Error: ' . $e->getMessage());
-      wp_send_json_error('Validation error: ' . $e->getMessage());
+    } catch (\Exception $e) {
+      SKU_Generator_Helpers::debug_log('Validation Error: ' . $e->getMessage());
+      wp_send_json_error(__('Validation error: ', 'sku-generator') . $e->getMessage());
     }
   }
 
-  public function ajax_fix_invalid_skus()
+  /**
+   * Handle fix invalid SKUs AJAX request
+   *
+   * @since 2.0.0
+   */
+  public function ajax_fix_invalid_skus(): void
   {
     try {
       check_ajax_referer('sku_generator_nonce', 'nonce');
 
       if (!current_user_can('manage_woocommerce')) {
-        wp_send_json_error('Insufficient permissions');
+        wp_send_json_error(__('Insufficient permissions', 'sku-generator'));
         return;
       }
 
-      $invalid_skus = get_transient('sku_validation_invalid') ?: array();
-      $duplicate_skus = get_transient('sku_validation_duplicates') ?: array();
+      $invalid_skus = get_transient('sku_validation_invalid') ?: [];
+      $duplicate_skus = get_transient('sku_validation_duplicates') ?: [];
 
       $fixed_count = 0;
       $generator = new SKU_Generator_Core();
@@ -185,20 +203,21 @@ class SKU_Generator_Ajax_Validation
           $product->set_sku($new_sku);
           $product->save();
           $fixed_count++;
-          error_log("SKU Fix: Product ID {$invalid_sku['product_id']} - Changed '$old_sku' to '$new_sku'");
+          SKU_Generator_Helpers::debug_log("Fix: Product ID {$invalid_sku['product_id']} - Changed '$old_sku' to '$new_sku'");
         }
       }
 
       // Fix duplicate SKUs (keep first, regenerate others)
       foreach ($duplicate_skus as $sku => $products_with_sku) {
-        for ($i = 1; $i < count($products_with_sku); $i++) {
+        $count = count($products_with_sku);
+        for ($i = 1; $i < $count; $i++) {
           $product = wc_get_product($products_with_sku[$i]['id']);
           if ($product) {
             $new_sku = $generator->generate_unique_sku($product);
             $product->set_sku($new_sku);
             $product->save();
             $fixed_count++;
-            error_log("SKU Fix: Duplicate Product ID {$products_with_sku[$i]['id']} - Changed '$sku' to '$new_sku'");
+            SKU_Generator_Helpers::debug_log("Fix: Duplicate Product ID {$products_with_sku[$i]['id']} - Changed '$sku' to '$new_sku'");
           }
         }
       }
@@ -209,15 +228,19 @@ class SKU_Generator_Ajax_Validation
       delete_transient('sku_validation_all_skus');
       delete_transient('sku_validation_total');
 
-      error_log("SKU Fix: Complete - Fixed $fixed_count SKUs");
+      SKU_Generator_Helpers::debug_log("Fix: Complete - Fixed $fixed_count SKUs");
 
-      wp_send_json_success(array(
-        'message' => sprintf(__('Fixed %d invalid SKUs successfully!', 'sku-generator'), $fixed_count),
-        'fixed_count' => $fixed_count
-      ));
-    } catch (Exception $e) {
-      error_log('SKU Fix Error: ' . $e->getMessage());
-      wp_send_json_error('Fix error: ' . $e->getMessage());
+      wp_send_json_success([
+        'message' => sprintf(
+          /* translators: %d: number of fixed SKUs */
+          __('Fixed %d invalid SKUs successfully!', 'sku-generator'),
+          $fixed_count
+        ),
+        'fixed_count' => $fixed_count,
+      ]);
+    } catch (\Exception $e) {
+      SKU_Generator_Helpers::debug_log('Fix Error: ' . $e->getMessage());
+      wp_send_json_error(__('Fix error: ', 'sku-generator') . $e->getMessage());
     }
   }
 }

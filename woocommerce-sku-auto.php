@@ -3,22 +3,24 @@
 /**
  * Plugin Name: WooCommerce SKU Automatics
  * Description: Comprehensive SKU generation and management for WooCommerce with validation, cleanup tools, and GTIN integration
- * Version: 2.0.1
+ * Version: 2.1.0
  * Author: openwpclub.com
  * Author URI: https://openwpclub.com
+ * License: Apache-2.0
+ * License URI: https://www.apache.org/licenses/LICENSE-2.0
  * Text Domain: sku-generator
  * Domain Path: /languages
- * Requires at least: 6.9
+ * Requires at least: 6.7
  * Requires PHP: 8.2
- * WC requires at least: 8.0
- * WC tested up to: 9.0
+ * WC requires at least: 9.0
+ * WC tested up to: 9.6
  * Requires Plugins: woocommerce
  */
 
 defined('ABSPATH') || exit;
 
 // Define plugin constants
-define('SKU_GENERATOR_VERSION', '2.0.1');
+define('SKU_GENERATOR_VERSION', '2.1.0');
 define('SKU_GENERATOR_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('SKU_GENERATOR_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -70,10 +72,15 @@ function sku_generator_init()
   new SKU_Generator_Settings();
 }
 
-// Declare HPOS compatibility
+// Declare WooCommerce feature compatibility
 add_action('before_woocommerce_init', function () {
   if (class_exists('\Automattic\WooCommerce\Utilities\FeaturesUtil')) {
-    \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('custom_order_tables', __FILE__, true);
+    // HPOS (High-Performance Order Storage) - custom orders tables
+    \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('custom_orders_tables', __FILE__, true);
+    // Block-based Cart and Checkout
+    \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('cart_checkout_blocks', __FILE__, true);
+    // Block-based Product Editor
+    \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('product_block_editor', __FILE__, true);
   }
 });
 
@@ -99,7 +106,7 @@ add_action('plugins_loaded', 'sku_generator_init');
 // Activation hook
 register_activation_hook(__FILE__, function () {
   // Set default options
-  $default_options = array(
+  $default_options = [
     'prefix' => '',
     'suffix' => '',
     'pattern_type' => 'alphanumeric',
@@ -111,8 +118,8 @@ register_activation_hook(__FILE__, function () {
     'include_date' => '0',
     'date_format' => 'Ymd',
     'copy_to_gtin' => '0',
-    'use_permalink' => '0'
-  );
+    'use_permalink' => '0',
+  ];
 
   if (!get_option('sku_generator_options')) {
     add_option('sku_generator_options', $default_options);

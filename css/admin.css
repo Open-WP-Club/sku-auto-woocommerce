@@ -1,7 +1,26 @@
-/* SKU Generator Admin Styles */
+/**
+ * SKU Generator Admin Styles
+ *
+ * @package SKU_Generator
+ * @since 2.0.0
+ * @version 2.1.0
+ */
 
 .sku-generator-wrap {
   max-width: 1200px;
+}
+
+/* Screen reader only text */
+.screen-reader-text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* Tab Navigation */
@@ -26,6 +45,20 @@
 .sku-nav-tabs .nav-tab:hover {
   background: #fff;
   color: #0073aa;
+}
+
+.sku-nav-tabs .nav-tab:focus {
+  outline: 2px solid #0073aa;
+  outline-offset: -2px;
+}
+
+.sku-nav-tabs .nav-tab:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.sku-nav-tabs .nav-tab:focus-visible {
+  outline: 2px solid #0073aa;
+  outline-offset: -2px;
 }
 
 .sku-nav-tabs .nav-tab-active {
@@ -148,9 +181,24 @@
   color: #fff;
 }
 
+.sku-button:focus {
+  outline: 2px solid #0073aa;
+  outline-offset: 2px;
+}
+
+.sku-button:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.sku-button:focus-visible {
+  outline: 2px solid #0073aa;
+  outline-offset: 2px;
+}
+
 .sku-button:disabled {
   background: #ccc;
   cursor: not-allowed;
+  opacity: 0.7;
 }
 
 .sku-button.secondary {
@@ -248,10 +296,12 @@
   border-radius: 0 4px 4px 0;
 }
 
+.sku-info-box h3,
 .sku-info-box h4 {
   margin-top: 0;
   margin-bottom: 15px;
   color: #0073aa;
+  font-size: 16px;
 }
 
 .sku-info-box ul {
@@ -261,6 +311,39 @@
 .sku-info-box li {
   margin-bottom: 5px;
   color: #333;
+}
+
+/* Warning Box */
+.sku-warning-box {
+  border-left-color: #d63638;
+  background: #fff8f8;
+}
+
+.sku-warning-box h3,
+.sku-warning-box h4 {
+  color: #d63638;
+}
+
+/* Explainer Card */
+.sku-explainer-card {
+  margin-top: 30px;
+  background: #f8f9fa;
+}
+
+.sku-definitions {
+  display: grid;
+  gap: 15px;
+  margin-top: 15px;
+}
+
+.sku-definitions dt {
+  font-weight: 600;
+  color: #333;
+}
+
+.sku-definitions dd {
+  margin: 5px 0 0 0;
+  color: #666;
 }
 
 /* Validation Results */
