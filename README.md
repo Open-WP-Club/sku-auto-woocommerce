@@ -14,7 +14,7 @@ A comprehensive WordPress plugin that automatically generates and manages SKUs f
 - Batch processing to handle large product catalogs
 - Progress tracking with visual indicators
 
-### Variation Support (New in 2.1.0)
+### Variation Support
 
 - Automatic SKU generation for product variations
 - Sequential numbering based on parent SKU
@@ -187,29 +187,6 @@ The plugin automatically detects and works with these GTIN/barcode fields:
 - WooCommerce UPC (`_woo_upc`)
 - Generic fields (`_gtin`, `_upc`, `_ean`, `_isbn`, `_barcode`)
 
-## Technical Features
-
-### WooCommerce Compatibility
-
-- **HPOS**: Full High-Performance Order Storage support
-- **Cart/Checkout Blocks**: Compatible with block-based checkout
-- **Product Block Editor**: Works with the new product editor
-
-### HPOS Compatibility
-
-- Automatic detection of High-Performance Order Storage
-- Dual-mode operation for both HPOS and legacy storage
-- Smart table detection with automatic fallback
-- Uses modern `FeaturesUtil` API (WC 8.2+)
-
-### Performance Optimization
-
-- Batch processing prevents timeouts on large catalogs
-- Progress tracking for all bulk operations
-- Memory-efficient database queries
-- HPOS detection caching for improved performance
-- Error recovery with comprehensive logging
-
 ### Data Safety
 
 - Unique SKU guarantee with conflict resolution
@@ -243,52 +220,12 @@ Use the built-in debug functions to diagnose issues:
 - **Permission errors**: Ensure user has `manage_woocommerce` capability
 - **Variations not generating**: Ensure parent product has a SKU first
 
-### Logging
-
-Enable WordPress debug logging to monitor operations:
-
-```php
-define('WP_DEBUG', true);
-define('WP_DEBUG_LOG', true);
-define('WP_DEBUG_DISPLAY', false);
-```
-
-Debug messages are only written when `WP_DEBUG` is enabled.
-
 ## System Requirements
 
 - WordPress: 6.7 or higher
 - WooCommerce: 9.0 or higher (tested up to 9.6)
 - PHP: 8.2 or higher
 - MySQL: 5.6 or higher
-
-## Changelog
-
-### 2.1.0 (February 2026)
-
-- **New**: Automatic variation SKU generation (Parent-1, Parent-2, etc.)
-- **New**: Dedicated "Generate Variation SKUs" button
-- **New**: WooCommerce 9.6 compatibility
-- **New**: Cart/Checkout Blocks compatibility declaration
-- **New**: Product Block Editor compatibility declaration
-- **Improved**: Modern HPOS detection using FeaturesUtil
-- **Improved**: HPOS detection caching for better performance
-- **Improved**: Debug logging only when WP_DEBUG is enabled
-- **Improved**: PHP 8.2+ features (typed properties, match expressions)
-- **Improved**: Accessibility enhancements (ARIA labels, focus states)
-- **Fixed**: HPOS compatibility key typo (custom_orders_tables)
-- **Fixed**: All strings properly escaped for security
-
-### 2.0.1
-
-- Bug fixes and stability improvements
-
-### 2.0.0
-
-- Initial release with full feature set
-- HPOS compatibility
-- GTIN integration
-- Bulk operations with progress tracking
 
 ## License
 
