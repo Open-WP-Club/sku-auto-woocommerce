@@ -95,7 +95,6 @@ add_filter('plugin_action_links_' . plugin_basename(__FILE__), function ($links)
 // Add plugin row meta
 add_filter('plugin_row_meta', function ($plugin_meta, $plugin_file) {
   if (plugin_basename(__FILE__) === $plugin_file) {
-    $plugin_meta[] = '<strong>' . __('HPOS Compatible', 'sku-generator') . '</strong>';
     $plugin_meta[] = '<a href="' . admin_url('admin.php?page=sku-generator&tab=validate') . '">' . __('Validate SKUs', 'sku-generator') . '</a>';
   }
   return $plugin_meta;
