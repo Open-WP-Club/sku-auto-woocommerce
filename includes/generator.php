@@ -302,10 +302,14 @@ class SKU_Generator_Core
   /**
    * Generate SKUs for all variations of a variable product
    *
-   * Creates variation SKUs based on parent SKU with sequential numbering.
-   * Example: Parent SKU "PROD-123" → Variations "PROD-123-1", "PROD-123-2", etc.
+   * Creates variation SKUs based on parent SKU with either sequential numbering
+   * or attribute values depending on settings.
+   *
+   * Numeric mode: Parent SKU "PROD-123" → "PROD-123-1", "PROD-123-2", etc.
+   * Attribute mode: Parent SKU "PROD-123" → "PROD-123-red-xl", "PROD-123-blue-m", etc.
    *
    * @since 2.1.0
+   * @since 2.2.0 Added attribute-based variation SKU mode
    * @param \WC_Product_Variable $parent_product The parent variable product
    * @param string $parent_sku The parent product's SKU
    * @return int Number of variations processed
@@ -315,6 +319,7 @@ class SKU_Generator_Core
     $options = get_option('sku_generator_options', []);
     $copy_to_gtin = $options['copy_to_gtin'] ?? '0';
     $separator = $options['separator'] ?? '-';
+    $variation_sku_mode = $options['variation_sku_mode'] ?? 'numeric';
 
     $variation_ids = $parent_product->get_children();
     $processed = 0;
@@ -335,14 +340,26 @@ class SKU_Generator_Core
         continue;
       }
 
-      // Generate variation SKU: parent_sku-1, parent_sku-2, etc.
-      $variation_sku = $parent_sku . $separator . $variation_number;
+      // Generate variation SKU based on mode
+      if ($variation_sku_mode === 'attributes') {
+        $attribute_suffix = $this->get_variation_attributes_suffix($variation, $separator);
+        if (!empty($attribute_suffix)) {
+          $variation_sku = $parent_sku . $separator . $attribute_suffix;
+        } else {
+          // Fallback to numeric if no attributes found
+          $variation_sku = $parent_sku . $separator . $variation_number;
+        }
+      } else {
+        // Numeric mode: parent_sku-1, parent_sku-2, etc.
+        $variation_sku = $parent_sku . $separator . $variation_number;
+      }
 
       // Ensure uniqueness
       $attempt = 0;
+      $base_sku = $variation_sku;
       while ($this->sku_exists($variation_sku) && $attempt < 100) {
         $attempt++;
-        $variation_sku = $parent_sku . $separator . $variation_number . $separator . $attempt;
+        $variation_sku = $base_sku . $separator . $attempt;
       }
 
       $variation->set_sku($variation_sku);
@@ -360,6 +377,76 @@ class SKU_Generator_Core
     }
 
     return $processed;
+  }
+
+  /**
+   * Get variation attributes as SKU suffix
+   *
+   * Extracts attribute values from a variation and creates a sanitized
+   * suffix string suitable for SKU use.
+   *
+   * @since 2.2.0
+   * @param \WC_Product_Variation $variation The variation product
+   * @param string $separator Separator character
+   * @return string Attribute-based suffix (e.g., "red-xl" or "blue-medium")
+   */
+  private function get_variation_attributes_suffix(\WC_Product_Variation $variation, string $separator): string
+  {
+    $attributes = $variation->get_attributes();
+
+    if (empty($attributes)) {
+      return '';
+    }
+
+    $suffix_parts = [];
+
+    foreach ($attributes as $attribute_name => $attribute_value) {
+      if (empty($attribute_value)) {
+        continue;
+      }
+
+      // Clean the attribute value for SKU use
+      $clean_value = $this->sanitize_attribute_for_sku($attribute_value);
+
+      if (!empty($clean_value)) {
+        $suffix_parts[] = $clean_value;
+      }
+    }
+
+    return implode($separator, $suffix_parts);
+  }
+
+  /**
+   * Sanitize an attribute value for use in SKU
+   *
+   * Converts attribute values to a SKU-safe format by removing
+   * special characters and converting to lowercase.
+   *
+   * @since 2.2.0
+   * @param string $value Raw attribute value
+   * @return string Sanitized value
+   */
+  private function sanitize_attribute_for_sku(string $value): string
+  {
+    // Convert to lowercase
+    $value = strtolower($value);
+
+    // Transliterate common Cyrillic characters to Latin
+    $transliteration = [
+      'а' => 'a', 'б' => 'b', 'в' => 'v', 'г' => 'g', 'д' => 'd',
+      'е' => 'e', 'ж' => 'zh', 'з' => 'z', 'и' => 'i', 'й' => 'y',
+      'к' => 'k', 'л' => 'l', 'м' => 'm', 'н' => 'n', 'о' => 'o',
+      'п' => 'p', 'р' => 'r', 'с' => 's', 'т' => 't', 'у' => 'u',
+      'ф' => 'f', 'х' => 'h', 'ц' => 'ts', 'ч' => 'ch', 'ш' => 'sh',
+      'щ' => 'sht', 'ъ' => 'a', 'ь' => '', 'ю' => 'yu', 'я' => 'ya',
+    ];
+    $value = strtr($value, $transliteration);
+
+    // Remove any remaining non-alphanumeric characters except hyphens and underscores
+    $value = preg_replace('/[^a-z0-9_-]/', '', $value);
+
+    // Limit length
+    return substr($value, 0, 20);
   }
 
   /**

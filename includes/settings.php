@@ -136,6 +136,14 @@ class SKU_Generator_Settings
       'sku-generator',
       'sku_generator_main'
     );
+
+    add_settings_field(
+      'variation_sku_mode',
+      __('Variation SKU Mode', 'sku-generator'),
+      [$this, 'variation_sku_mode_field'],
+      'sku-generator',
+      'sku_generator_main'
+    );
   }
 
   /**
@@ -159,6 +167,7 @@ class SKU_Generator_Settings
       'date_format' => 'Ymd',
       'copy_to_gtin' => '0',
       'use_permalink' => '0',
+      'variation_sku_mode' => 'numeric',
     ];
   }
 
@@ -215,6 +224,11 @@ class SKU_Generator_Settings
     $date_format = $input['date_format'] ?? 'Ymd';
     $allowed_formats = ['Ymd', 'ymd', 'ym', 'y'];
     $sanitized['date_format'] = in_array($date_format, $allowed_formats, true) ? $date_format : 'Ymd';
+
+    // Sanitize variation SKU mode (whitelist)
+    $variation_sku_mode = $input['variation_sku_mode'] ?? 'numeric';
+    $allowed_modes = ['numeric', 'attributes'];
+    $sanitized['variation_sku_mode'] = in_array($variation_sku_mode, $allowed_modes, true) ? $variation_sku_mode : 'numeric';
 
     return $sanitized;
   }
@@ -450,6 +464,28 @@ class SKU_Generator_Settings
       <label for="copy_to_gtin"><?php esc_html_e('Copy generated SKU to GTIN, UPC, EAN, or ISBN field', 'sku-generator'); ?></label>
     </div>
     <p class="description"><?php esc_html_e('When enabled, the generated SKU will also be copied to the product\'s GTIN/UPC/EAN/ISBN field.', 'sku-generator'); ?></p>
+  <?php
+  }
+
+  /**
+   * Render variation SKU mode field
+   *
+   * @since 2.2.0
+   */
+  public function variation_sku_mode_field(): void
+  {
+    $options = get_option('sku_generator_options', []);
+    $variation_sku_mode = $options['variation_sku_mode'] ?? 'numeric';
+  ?>
+    <div class="sku-form-group">
+      <select name="sku_generator_options[variation_sku_mode]" id="variation_sku_mode">
+        <option value="numeric" <?php selected($variation_sku_mode, 'numeric'); ?>><?php esc_html_e('Numeric (PARENT-1, PARENT-2, ...)', 'sku-generator'); ?></option>
+        <option value="attributes" <?php selected($variation_sku_mode, 'attributes'); ?>><?php esc_html_e('Attribute-based (PARENT-red-xl, PARENT-blue-m, ...)', 'sku-generator'); ?></option>
+      </select>
+      <p class="description"><?php esc_html_e('How to generate SKUs for product variations.', 'sku-generator'); ?></p>
+      <p class="description"><strong><?php esc_html_e('Numeric:', 'sku-generator'); ?></strong> <?php esc_html_e('Simple sequential numbers appended to parent SKU.', 'sku-generator'); ?></p>
+      <p class="description"><strong><?php esc_html_e('Attribute-based:', 'sku-generator'); ?></strong> <?php esc_html_e('Uses variation attribute values (color, size, etc.) for more meaningful SKUs.', 'sku-generator'); ?></p>
+    </div>
 <?php
   }
 }

@@ -466,4 +466,139 @@ class SKU_Generator_Helpers
 
     return $variation->get_parent_id();
   }
+
+  /**
+   * Get comprehensive SKU statistics
+   *
+   * Returns counts for products and variations with and without SKUs.
+   *
+   * @since 2.2.0
+   * @return array{
+   *   products_total: int,
+   *   products_with_sku: int,
+   *   products_without_sku: int,
+   *   variations_total: int,
+   *   variations_with_sku: int,
+   *   variations_without_sku: int,
+   *   coverage_percent: float
+   * }
+   */
+  public static function get_sku_statistics(): array
+  {
+    global $wpdb;
+
+    $stats = [
+      'products_total' => 0,
+      'products_with_sku' => 0,
+      'products_without_sku' => 0,
+      'variations_total' => 0,
+      'variations_with_sku' => 0,
+      'variations_without_sku' => 0,
+      'coverage_percent' => 0.0,
+    ];
+
+    if (self::is_hpos_enabled()) {
+      // Products with SKU
+      $stats['products_with_sku'] = (int) $wpdb->get_var("
+        SELECT COUNT(p.id)
+        FROM {$wpdb->prefix}wc_products p
+        INNER JOIN {$wpdb->prefix}wc_product_meta_lookup pml ON p.id = pml.product_id
+        WHERE p.status = 'publish'
+        AND pml.sku IS NOT NULL AND pml.sku != '' AND TRIM(pml.sku) != ''
+      ");
+
+      // Products without SKU
+      $stats['products_without_sku'] = (int) $wpdb->get_var("
+        SELECT COUNT(p.id)
+        FROM {$wpdb->prefix}wc_products p
+        LEFT JOIN {$wpdb->prefix}wc_product_meta_lookup pml ON p.id = pml.product_id
+        WHERE p.status = 'publish'
+        AND (pml.sku IS NULL OR pml.sku = '' OR TRIM(pml.sku) = '')
+      ");
+
+      // Variations with SKU
+      $stats['variations_with_sku'] = (int) $wpdb->get_var("
+        SELECT COUNT(p.ID)
+        FROM {$wpdb->posts} p
+        INNER JOIN {$wpdb->prefix}wc_product_meta_lookup pml ON p.ID = pml.product_id
+        WHERE p.post_type = 'product_variation'
+        AND p.post_status = 'publish'
+        AND pml.sku IS NOT NULL AND pml.sku != '' AND TRIM(pml.sku) != ''
+      ");
+
+      // Variations without SKU
+      $stats['variations_without_sku'] = (int) $wpdb->get_var("
+        SELECT COUNT(p.ID)
+        FROM {$wpdb->posts} p
+        LEFT JOIN {$wpdb->prefix}wc_product_meta_lookup pml ON p.ID = pml.product_id
+        WHERE p.post_type = 'product_variation'
+        AND p.post_status = 'publish'
+        AND (pml.sku IS NULL OR pml.sku = '' OR TRIM(pml.sku) = '')
+      ");
+    } else {
+      // Products with SKU (legacy)
+      $stats['products_with_sku'] = (int) $wpdb->get_var("
+        SELECT COUNT(p.ID)
+        FROM {$wpdb->posts} p
+        INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
+        WHERE p.post_type = 'product'
+        AND p.post_status = 'publish'
+        AND pm.meta_key = '_sku'
+        AND pm.meta_value IS NOT NULL AND pm.meta_value != '' AND TRIM(pm.meta_value) != ''
+      ");
+
+      // Products without SKU (legacy)
+      $stats['products_without_sku'] = (int) $wpdb->get_var("
+        SELECT COUNT(p.ID)
+        FROM {$wpdb->posts} p
+        WHERE p.post_type = 'product'
+        AND p.post_status = 'publish'
+        AND p.ID NOT IN (
+          SELECT pm.post_id
+          FROM {$wpdb->postmeta} pm
+          WHERE pm.meta_key = '_sku'
+          AND pm.meta_value IS NOT NULL AND pm.meta_value != '' AND TRIM(pm.meta_value) != ''
+        )
+      ");
+
+      // Variations with SKU (legacy)
+      $stats['variations_with_sku'] = (int) $wpdb->get_var("
+        SELECT COUNT(p.ID)
+        FROM {$wpdb->posts} p
+        INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
+        WHERE p.post_type = 'product_variation'
+        AND p.post_status = 'publish'
+        AND pm.meta_key = '_sku'
+        AND pm.meta_value IS NOT NULL AND pm.meta_value != '' AND TRIM(pm.meta_value) != ''
+      ");
+
+      // Variations without SKU (legacy)
+      $stats['variations_without_sku'] = (int) $wpdb->get_var("
+        SELECT COUNT(p.ID)
+        FROM {$wpdb->posts} p
+        WHERE p.post_type = 'product_variation'
+        AND p.post_status = 'publish'
+        AND p.ID NOT IN (
+          SELECT pm.post_id
+          FROM {$wpdb->postmeta} pm
+          WHERE pm.meta_key = '_sku'
+          AND pm.meta_value IS NOT NULL AND pm.meta_value != '' AND TRIM(pm.meta_value) != ''
+        )
+      ");
+    }
+
+    // Calculate totals
+    $stats['products_total'] = $stats['products_with_sku'] + $stats['products_without_sku'];
+    $stats['variations_total'] = $stats['variations_with_sku'] + $stats['variations_without_sku'];
+
+    // Calculate coverage percentage
+    $total_items = $stats['products_total'] + $stats['variations_total'];
+    $items_with_sku = $stats['products_with_sku'] + $stats['variations_with_sku'];
+
+    if ($total_items > 0) {
+      $stats['coverage_percent'] = round(($items_with_sku / $total_items) * 100, 1);
+    }
+
+    return $stats;
+  }
 }

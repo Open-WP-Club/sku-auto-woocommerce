@@ -86,12 +86,54 @@ class SKU_Generator_Admin
    * Render admin page
    *
    * @since 2.0.0
+   * @since 2.2.0 Added SKU statistics widget
    */
   public function admin_page(): void
   {
+    $stats = SKU_Generator_Helpers::get_sku_statistics();
     ?>
     <div class="wrap sku-generator-wrap">
       <h1><?php echo esc_html__('WooCommerce SKU Automatics', 'sku-generator'); ?></h1>
+
+      <!-- SKU Statistics Widget -->
+      <div class="sku-stats-widget">
+        <div class="sku-stats-grid">
+          <div class="sku-stat-card">
+            <div class="sku-stat-icon dashicons dashicons-products"></div>
+            <div class="sku-stat-content">
+              <span class="sku-stat-number"><?php echo esc_html($stats['products_total']); ?></span>
+              <span class="sku-stat-label"><?php esc_html_e('Products', 'sku-generator'); ?></span>
+            </div>
+            <div class="sku-stat-detail">
+              <span class="sku-stat-good"><?php echo esc_html($stats['products_with_sku']); ?> <?php esc_html_e('with SKU', 'sku-generator'); ?></span>
+              <span class="sku-stat-warning"><?php echo esc_html($stats['products_without_sku']); ?> <?php esc_html_e('missing', 'sku-generator'); ?></span>
+            </div>
+          </div>
+
+          <div class="sku-stat-card">
+            <div class="sku-stat-icon dashicons dashicons-image-filter"></div>
+            <div class="sku-stat-content">
+              <span class="sku-stat-number"><?php echo esc_html($stats['variations_total']); ?></span>
+              <span class="sku-stat-label"><?php esc_html_e('Variations', 'sku-generator'); ?></span>
+            </div>
+            <div class="sku-stat-detail">
+              <span class="sku-stat-good"><?php echo esc_html($stats['variations_with_sku']); ?> <?php esc_html_e('with SKU', 'sku-generator'); ?></span>
+              <span class="sku-stat-warning"><?php echo esc_html($stats['variations_without_sku']); ?> <?php esc_html_e('missing', 'sku-generator'); ?></span>
+            </div>
+          </div>
+
+          <div class="sku-stat-card sku-stat-coverage">
+            <div class="sku-stat-icon dashicons dashicons-chart-pie"></div>
+            <div class="sku-stat-content">
+              <span class="sku-stat-number <?php echo $stats['coverage_percent'] >= 100 ? 'sku-stat-complete' : ''; ?>"><?php echo esc_html($stats['coverage_percent']); ?>%</span>
+              <span class="sku-stat-label"><?php esc_html_e('SKU Coverage', 'sku-generator'); ?></span>
+            </div>
+            <div class="sku-stat-progress">
+              <div class="sku-stat-progress-bar" style="width: <?php echo esc_attr($stats['coverage_percent']); ?>%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <nav class="sku-nav-tabs nav-tab-wrapper" aria-label="<?php esc_attr_e('SKU Generator sections', 'sku-generator'); ?>">
         <a href="#settings" class="nav-tab nav-tab-active" id="settings-tab" role="tab" aria-selected="true" aria-controls="settings-content">
@@ -136,6 +178,7 @@ class SKU_Generator_Admin
           $options = get_option('sku_generator_options', []);
           $copy_to_gtin = $options['copy_to_gtin'] ?? '0';
           $use_permalink = $options['use_permalink'] ?? '0';
+          $variation_sku_mode = $options['variation_sku_mode'] ?? 'numeric';
 
           if ($copy_to_gtin === '1') :
           ?>
@@ -153,7 +196,11 @@ class SKU_Generator_Admin
 
           <div class="sku-info-box" role="status">
             <p><strong><?php esc_html_e('Variation SKUs:', 'sku-generator'); ?></strong> <?php esc_html_e('Variations automatically receive SKUs based on their parent product.', 'sku-generator'); ?></p>
-            <p><?php esc_html_e('Format: Parent SKU + separator + number (e.g., PROD-123-1, PROD-123-2, PROD-123-3)', 'sku-generator'); ?></p>
+            <?php if ($variation_sku_mode === 'attributes') : ?>
+              <p><?php esc_html_e('Mode: Attribute-based (e.g., PROD-123-red-xl, PROD-123-blue-m)', 'sku-generator'); ?></p>
+            <?php else : ?>
+              <p><?php esc_html_e('Mode: Numeric (e.g., PROD-123-1, PROD-123-2, PROD-123-3)', 'sku-generator'); ?></p>
+            <?php endif; ?>
           </div>
 
           <div class="sku-action-section">

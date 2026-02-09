@@ -200,23 +200,41 @@ class SKU_Generator_Ajax_Generation
         }
 
         $next_number = empty($existing_numbers) ? 1 : max($existing_numbers) + 1;
+        $variation_sku_mode = $options['variation_sku_mode'] ?? 'numeric';
 
         // Generate SKUs for variations without SKUs
         foreach ($variation_ids as $variation_id) {
           $variation = wc_get_product($variation_id);
 
-          if (!$variation) {
+          if (!$variation || !$variation instanceof \WC_Product_Variation) {
             continue;
           }
 
-          $variation_sku = $parent_sku . $separator . $next_number;
+          // Generate variation SKU based on mode
+          if ($variation_sku_mode === 'attributes') {
+            $attribute_suffix = $this->get_variation_attributes_suffix($variation, $separator);
+            if (!empty($attribute_suffix)) {
+              $variation_sku = $parent_sku . $separator . $attribute_suffix;
+            } else {
+              // Fallback to numeric if no attributes found
+              $variation_sku = $parent_sku . $separator . $next_number;
+            }
+          } else {
+            // Numeric mode
+            $variation_sku = $parent_sku . $separator . $next_number;
+          }
 
           // Ensure uniqueness
           $attempt = 0;
+          $base_sku = $variation_sku;
           while ($this->sku_exists_check($variation_sku) && $attempt < 100) {
             $attempt++;
-            $next_number++;
-            $variation_sku = $parent_sku . $separator . $next_number;
+            if ($variation_sku_mode === 'attributes') {
+              $variation_sku = $base_sku . $separator . $attempt;
+            } else {
+              $next_number++;
+              $variation_sku = $parent_sku . $separator . $next_number;
+            }
           }
 
           $variation->set_sku($variation_sku);
@@ -277,5 +295,65 @@ class SKU_Generator_Ajax_Generation
     }
 
     return $exists > 0;
+  }
+
+  /**
+   * Get variation attributes as SKU suffix
+   *
+   * @since 2.2.0
+   * @param \WC_Product_Variation $variation The variation product
+   * @param string $separator Separator character
+   * @return string Attribute-based suffix
+   */
+  private function get_variation_attributes_suffix(\WC_Product_Variation $variation, string $separator): string
+  {
+    $attributes = $variation->get_attributes();
+
+    if (empty($attributes)) {
+      return '';
+    }
+
+    $suffix_parts = [];
+
+    foreach ($attributes as $attribute_name => $attribute_value) {
+      if (empty($attribute_value)) {
+        continue;
+      }
+
+      $clean_value = $this->sanitize_attribute_for_sku($attribute_value);
+
+      if (!empty($clean_value)) {
+        $suffix_parts[] = $clean_value;
+      }
+    }
+
+    return implode($separator, $suffix_parts);
+  }
+
+  /**
+   * Sanitize an attribute value for use in SKU
+   *
+   * @since 2.2.0
+   * @param string $value Raw attribute value
+   * @return string Sanitized value
+   */
+  private function sanitize_attribute_for_sku(string $value): string
+  {
+    $value = strtolower($value);
+
+    // Transliterate Cyrillic to Latin
+    $transliteration = [
+      'а' => 'a', 'б' => 'b', 'в' => 'v', 'г' => 'g', 'д' => 'd',
+      'е' => 'e', 'ж' => 'zh', 'з' => 'z', 'и' => 'i', 'й' => 'y',
+      'к' => 'k', 'л' => 'l', 'м' => 'm', 'н' => 'n', 'о' => 'o',
+      'п' => 'p', 'р' => 'r', 'с' => 's', 'т' => 't', 'у' => 'u',
+      'ф' => 'f', 'х' => 'h', 'ц' => 'ts', 'ч' => 'ch', 'ш' => 'sh',
+      'щ' => 'sht', 'ъ' => 'a', 'ь' => '', 'ю' => 'yu', 'я' => 'ya',
+    ];
+    $value = strtr($value, $transliteration);
+
+    $value = preg_replace('/[^a-z0-9_-]/', '', $value);
+
+    return substr($value, 0, 20);
   }
 }
