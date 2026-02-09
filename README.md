@@ -1,4 +1,4 @@
-# WooCommerce SKU Automatics
+# SKU Automatics for WooCommerce
 
 A comprehensive WordPress plugin that automatically generates and manages SKUs for WooCommerce products with advanced validation, cleanup tools, variation support, and GTIN integration.
 

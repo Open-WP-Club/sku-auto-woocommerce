@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Plugin Name: WooCommerce SKU Automatics
+ * Plugin Name: SKU Automatics for WooCommerce 
  * Description: Comprehensive SKU generation and management for WooCommerce with validation, cleanup tools, and GTIN integration
  * Version: 2.2.0
  * Author: openwpclub.com
@@ -30,7 +30,7 @@ function sku_generator_check_woocommerce()
   if (!class_exists('WooCommerce')) {
     add_action('admin_notices', function () {
       echo '<div class="notice notice-error"><p>' .
-        __('WooCommerce SKU Automatics requires WooCommerce to be installed and active.', 'sku-generator') .
+        __('SKU Automatics for WooCommerce requires WooCommerce to be installed and active.', 'sku-generator') .
         '</p></div>';
     });
     return false;

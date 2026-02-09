@@ -93,7 +93,7 @@ class SKU_Generator_Admin
     $stats = SKU_Generator_Helpers::get_sku_statistics();
     ?>
     <div class="wrap sku-generator-wrap">
-      <h1><?php echo esc_html__('WooCommerce SKU Automatics', 'sku-generator'); ?></h1>
+      <h1><?php echo esc_html__('SKU Automatics for WooCommerce', 'sku-generator'); ?></h1>
 
       <!-- SKU Statistics Widget -->
       <div class="sku-stats-widget">
