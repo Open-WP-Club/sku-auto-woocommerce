@@ -77,7 +77,7 @@ $sku_generator_plugin_file = __FILE__;
 add_action('before_woocommerce_init', function () use ($sku_generator_plugin_file) {
   if (class_exists('\Automattic\WooCommerce\Utilities\FeaturesUtil')) {
     // HPOS (High-Performance Order Storage) - custom orders tables
-    \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('custom_orders_tables', $sku_generator_plugin_file, true);
+    \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('custom_order_tables', $sku_generator_plugin_file, true);
     // Block-based Cart and Checkout
     \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('cart_checkout_blocks', $sku_generator_plugin_file, true);
     // Block-based Product Editor
