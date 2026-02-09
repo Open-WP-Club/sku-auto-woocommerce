@@ -3,7 +3,7 @@
 /**
  * Plugin Name: SKU Automatics for WooCommerce 
  * Description: Comprehensive SKU generation and management for WooCommerce with validation, cleanup tools, and GTIN integration
- * Version: 2.2.1
+ * Version: 2.2.2
  * Author: openwpclub.com
  * Author URI: https://openwpclub.com
  * License: Apache-2.0
@@ -20,7 +20,7 @@
 defined('ABSPATH') || exit;
 
 // Define plugin constants
-define('SKU_GENERATOR_VERSION', '2.2.1');
+define('SKU_GENERATOR_VERSION', '2.2.2');
 define('SKU_GENERATOR_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('SKU_GENERATOR_PLUGIN_URL', plugin_dir_url(__FILE__));
 
